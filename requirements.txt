@@ -1,0 +1,7 @@
+# Raspberry Pi kiosk dependencies
+# Tkinter is installed through Raspberry Pi OS (python3-tk), not pip.
+
+# Add hardware libraries here when hardware is integrated.
+# adafruit-circuitpython-pn532
+# gpiozero
+# pygame
