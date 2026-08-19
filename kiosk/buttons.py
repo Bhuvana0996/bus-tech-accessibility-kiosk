@@ -1,15 +1,18 @@
-"""Physical bus-button interface.
+"""Physical bus-button mapping.
 
-Hardware GPIO handling will be added after the LCD/UI prototype is tested.
-For now this module defines the bus services used by the kiosk.
+Hardware GPIO will be connected later. During development, keyboard keys
+1, 2 and 3 simulate these physical bus clickers.
 """
 
-BUS_SERVICES = {
-    "BUS_12": "Bus 12",
-    "BUS_27": "Bus 27",
-    "BUS_36": "Bus 36",
+BUS_BUTTONS = {
+    "12": 1,
+    "27": 2,
+    "36": 3,
 }
 
 
-def get_bus_name(bus_id: str) -> str:
-    return BUS_SERVICES[bus_id]
+def get_bus_from_button(button_number: int):
+    for bus, button in BUS_BUTTONS.items():
+        if button == button_number:
+            return bus
+    return None
