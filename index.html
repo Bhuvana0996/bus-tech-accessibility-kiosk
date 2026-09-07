@@ -1,1 +1,1340 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Accessibility Kiosk</title><style>:root{--blue:#0068a9;--ink:#172b3a;--muted:#617383;--line:#d5e0e7;--pale:#edf6fb;--green:#137a49;--red:#b93636}*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;font-family:Arial,sans-serif;color:var(--ink);background:#d9e1e7}body{display:grid;place-items:center}.kiosk{width:1024px;height:600px;background:#fff;position:relative;overflow:hidden;box-shadow:0 12px 35px #0002}header{height:72px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;padding:0 34px}.brand{display:flex;gap:12px;align-items:center}.brandmark{width:40px;height:40px;background:var(--blue);color:#fff;display:grid;place-items:center;font-weight:800}.brand h1{font-size:20px;margin:0}.brand p{font-size:12px;color:var(--muted);margin:3px 0}.status{font-size:12px;color:var(--muted)}.clock{font-size:16px;font-weight:700;color:var(--ink);margin-left:15px}.screen{height:472px;padding:32px 58px;display:none}.screen.active{display:block}.center{text-align:center}.kicker{font-size:12px;color:var(--blue);font-weight:800;letter-spacing:.75px;text-transform:uppercase;margin-bottom:9px}.headline{font-size:34px;line-height:1.14;margin:0}.lead{font-size:16px;color:var(--muted);line-height:1.45;max-width:700px;margin:9px auto}.actions{display:flex;justify-content:center;gap:16px;margin-top:28px}.lang,.bus-choice{border:1px solid var(--line);background:#fff;cursor:pointer}.lang{width:188px;height:82px;text-align:left;padding:16px 18px}.lang strong{display:block;font-size:18px}.lang span{font-size:13px;color:var(--muted)}.assist-strip{position:absolute;bottom:72px;left:58px;right:58px;border-top:1px solid var(--line);padding-top:13px;display:flex;justify-content:center;gap:28px;font-size:12px;color:var(--muted)}.nfc-wrap{max-width:730px;margin:25px auto}.tap-panel{border:1px solid var(--line);background:#f8fafb;padding:28px 34px;display:flex;align-items:center;gap:30px;text-align:left}.nfc-reader{width:126px;height:126px;border:3px solid var(--blue);background:var(--pale);display:grid;place-items:center;flex:none}.nfc-symbol{font-weight:800;color:var(--blue);font-size:28px}.tap-copy h3{font-size:25px;margin:0 0 8px}.tap-copy p{color:var(--muted);line-height:1.45}.waiting{margin-top:18px;font-weight:700;color:var(--blue)}.demo-row{display:flex;gap:18px;margin-top:20px}.demo{font-size:12px;color:var(--blue);font-weight:700;text-decoration:underline;cursor:pointer}.detected{max-width:680px;margin:55px auto;border:1px solid #b9dfcc;background:#f3faf6;padding:25px}.detected .check{font-size:27px;color:var(--green);font-weight:800}.detected p{color:var(--muted)}.greeting{max-width:760px;margin:22px auto;text-align:left;border-left:5px solid var(--green);background:#f3faf6;padding:20px 24px}.greeting h2{font-size:29px;margin:0}.greeting p{color:var(--muted);margin:6px 0}.physical-buttons{display:flex;justify-content:center;gap:18px;margin-top:20px}.bus-choice{width:250px;min-height:125px;padding:18px;text-align:left;position:relative}.bus-choice .num{font-size:40px;font-weight:800;color:var(--blue)}.desc{font-size:13px;color:var(--muted);margin-top:4px}.button-tag{position:absolute;right:16px;bottom:16px;font-size:11px;font-weight:800;color:var(--blue);border:1px solid #a9cbe0;padding:5px 8px;background:var(--pale)}.error{max-width:700px;margin:32px auto;border-left:5px solid var(--red);background:#fff6f6;padding:21px 25px;text-align:left}.error h2{margin:0}.hotline{font-size:25px;font-weight:800;margin-top:15px}.hotline small{font-size:12px;font-weight:400;color:var(--muted)}.secondary{margin-top:20px;padding:11px 17px;border:1px solid var(--line);background:#fff;color:var(--blue);font-weight:700}.bus-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:24px}.bus-card{border:1px solid var(--line);padding:23px;min-height:230px}.bus-number{font-size:55px;font-weight:800;color:var(--blue)}.bus-name{font-weight:700;margin-top:10px}.direction{font-size:14px;color:var(--muted);margin-top:4px}.arrival-row{border-top:1px solid var(--line);margin-top:19px;padding-top:15px;display:flex;justify-content:space-between}.arrival{font-size:25px;color:var(--green);font-weight:800}.physical{font-size:11px;color:var(--blue);font-weight:800}.confirm{max-width:700px;margin:30px auto;border:1px solid var(--line);background:#fafcfd;padding:26px 34px}.bigbus{font-size:58px;font-weight:800;color:var(--blue)}.confirm h2{font-size:29px;margin:7px}.confirm p{color:var(--muted)}.confirm-key{display:inline-block;background:var(--blue);color:#fff;padding:13px 23px;font-weight:800;margin-top:15px;border:0;cursor:pointer;font-family:inherit;font-size:14px}.confirm-key:hover{filter:brightness(.92)}.change{display:block;margin:15px auto;border:0;background:none;color:var(--blue);font-weight:700;cursor:pointer}.arrival-screen{max-width:850px;margin:45px auto;display:grid;grid-template-columns:220px 1fr;gap:34px;align-items:center}.arrival-badge{border:1px solid var(--line);padding:25px;text-align:center}.arrival-badge .n{font-size:70px;color:var(--blue);font-weight:800}.arrival-info h2{font-size:30px;margin:0}.dest{font-size:18px;color:var(--muted);margin-top:5px}.next{margin-top:24px;background:#f3faf6;border-left:5px solid var(--green);padding:18px 22px}.next small{display:block;color:var(--muted)}.next strong{font-size:31px;color:var(--green)}.thankyou{margin-top:22px;font-size:20px;font-weight:700}.audio{font-size:13px;color:var(--muted);margin-top:8px}.instruction{position:absolute;bottom:0;width:100%;height:56px;background:#f3f6f8;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700}.instruction:before{content:'●';color:var(--blue);margin-right:10px}@media(max-width:800px){.kiosk{width:100vw;height:100vh}.screen{padding:25px}.bus-grid{grid-template-columns:1fr}.tap-panel{width:100%}.actions,.physical-buttons{flex-wrap:wrap}.arrival-screen{grid-template-columns:1fr}.assist-strip{left:25px;right:25px}}</style></head><body><div class="kiosk"><header><div class="brand"><div class="brandmark">A</div><div><h1>Accessibility Kiosk</h1><p>Accessible bus travel assistance</p></div></div><div class="status">● <span id="statusText">Ready</span><span class="clock" id="clock">09:00</span></div></header><section id="welcome" class="screen active center"><div style="margin-top:30px"><div class="kicker">Welcome</div><h2 class="headline">Welcome to the<br>Accessibility Kiosk</h2><p class="lead">Get personalised bus information and travel assistance.</p></div><div class="kicker" style="margin-top:38px">Select your language</div><div class="actions"><button class="lang" onclick="chooseLang('en')"><strong>English</strong><span>English</span></button><button class="lang" onclick="chooseLang('zh')"><strong>中文</strong><span>Chinese</span></button><button class="lang" onclick="chooseLang('ms')"><strong>Bahasa Melayu</strong><span>Malay</span></button><button class="lang" onclick="chooseLang('ta')"><strong>தமிழ்</strong><span>Tamil</span></button></div><div class="assist-strip"><span>High-contrast display</span><span>Physical-button controls</span><span>Audio assistance available</span></div></section><section id="nfc" class="screen center"><div class="kicker">STEP 2 — IDENTIFY</div><h2 class="headline">Tap your accessibility card</h2><p class="lead">Hold your registered NFC card against the reader. Keep it there until the card is detected.</p><div class="nfc-wrap"><div class="tap-panel"><div class="nfc-reader"><div class="nfc-symbol">NFC</div></div><div class="tap-copy"><h3>Tap card once</h3><p>The kiosk will check your accessibility profile and continue automatically.</p><div class="waiting">Waiting for card…</div><div class="demo-row"><span class="demo" onclick="identify(true)">Demo: registered card</span><span class="demo" onclick="identify(false)">Demo: unregistered card</span></div></div></div></div></section><section id="detected" class="screen center"><div class="kicker">CARD DETECTED</div><div class="detected"><div class="check">Card recognised</div><p>Checking your accessibility profile…</p></div></section><section id="registered" class="screen center"><div class="kicker">READY</div><div class="greeting"><h2>Hi, Bhuvana.</h2><p>Your accessibility profile has been recognised.</p></div><h2 class="headline" style="font-size:29px">What bus would you like to take today?</h2><p class="lead">Use the physical button beside your preferred service.</p><div class="physical-buttons"><button class="bus-choice" onclick="selectBus(191)"><div class="num">191</div><div class="desc">Towards one-north</div><div class="button-tag">BUTTON 1</div></button><button class="bus-choice" onclick="selectBus(400)"><div class="num">400</div><div class="desc">Towards Marina Bay</div><div class="button-tag">BUTTON 2</div></button></div></section><section id="unregistered" class="screen center"><div class="kicker">CARD NOT RECOGNISED</div><div class="error"><h2>User not registered</h2><p>We could not find your card in the accessibility kiosk system.</p><div class="hotline">1800 2255 582 <small>LTA Customer Service</small></div><p>Please contact LTA for assistance with public transport-related enquiries.</p></div><button class="secondary" onclick="go('welcome')">Return to start</button></section><section id="buses" class="screen"><div class="kicker">BUS SERVICES</div><h2 class="headline" style="font-size:30px">Choose your bus</h2><p class="lead" style="margin:6px 0">Press the physical button beside your preferred service.</p><div class="bus-grid"><div id="bus191" class="bus-card" onclick="selectBus(191)"><div class="bus-number">191</div><div class="bus-name">Bus Service 191</div><div class="direction">Towards one-north</div><div class="arrival-row"><div><small>Next bus</small><div class="arrival">5 min</div></div><div class="physical">BUTTON 1</div></div></div><div id="bus400" class="bus-card" onclick="selectBus(400)"><div class="bus-number">400</div><div class="bus-name">Bus Service 400</div><div class="direction">Towards Marina Bay</div><div class="arrival-row"><div><small>Next bus</small><div class="arrival">8 min</div></div><div class="physical">BUTTON 2</div></div></div></div></section><section id="confirm" class="screen center"><div class="confirm"><div class="kicker">CONFIRM</div><div class="bigbus" id="confirmBus">191</div><h2 id="confirmTitle">Take Bus 191?</h2><p>Press the <b>same physical button again</b> to confirm.</p><button class="confirm-key" id="confirmKey" onclick="confirm()">BUTTON 1 — CONFIRM</button><button class="change" onclick="go('buses')">Press the other bus button to change</button></div></section><section id="arrival" class="screen"><div class="arrival-screen"><div class="arrival-badge"><div class="kicker">YOUR BUS</div><div class="n" id="arrivalBus">191</div></div><div class="arrival-info"><div class="kicker">BUS SELECTED</div><h2 id="arrivalTitle">Bus 191</h2><div class="dest" id="arrivalDest">Towards one-north</div><div class="next"><small>Your bus will arrive in</small><strong id="arrivalTime">5 min</strong></div><div class="access">Accessibility support is available. Audio assistance will also provide the same information through the attached speaker.</div><div class="thankyou">Thank you for using our service.</div><div class="audio">Audio message: “Your bus will arrive in 5 minutes. Thank you for using our service.”</div></div></div></section><div class="instruction" id="instruction">Select a language to begin</div></div><script>let selectedBus=null;const data={191:{dest:'Towards one-north',time:'5 minutes',button:'BUTTON 1'},400:{dest:'Towards Marina Bay',time:'8 minutes',button:'BUTTON 2'}};function go(id){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');const m={welcome:'Select a language to begin',nfc:'Tap your registered NFC card on the reader',detected:'Card detected — checking your profile',registered:'Use the physical button beside your preferred service',unregistered:'Please contact LTA Customer Service for assistance',buses:'Press the physical button beside your preferred service',confirm:'Press the same physical button again to confirm',arrival:'Please wait for your bus'};document.getElementById('instruction').textContent=m[id]||'';document.getElementById('statusText').textContent=id==='welcome'?'Ready':id==='arrival'?'Journey ready':'Assistance mode'}function chooseLang(){go('nfc')}function identify(registered){if(!registered){go('unregistered');return}go('detected');setTimeout(()=>go('registered'),1200)}function selectBus(bus){selectedBus=bus;document.getElementById('confirmBus').textContent=bus;document.getElementById('confirmTitle').textContent='Take Bus '+bus+'?';document.getElementById('confirmKey').textContent=data[bus].button+' — CONFIRM';go('confirm')}function confirm(){if(!selectedBus)return;document.getElementById('arrivalBus').textContent=selectedBus;document.getElementById('arrivalTitle').textContent='Bus '+selectedBus;document.getElementById('arrivalDest').textContent=data[selectedBus].dest;document.getElementById('arrivalTime').textContent=data[selectedBus].time;go('arrival');speak('Your bus, '+selectedBus+', will arrive in '+data[selectedBus].time+'. Thank you for using our service.')}function speak(t){if('speechSynthesis' in window){speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(t))}}function updateClock(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-SG',{hour:'2-digit',minute:'2-digit',hour12:false})}updateClock();setInterval(updateClock,1000);document.addEventListener('keydown',e=>{if(e.key==='1'){if(document.getElementById('confirm').classList.contains('active')&&selectedBus===191)confirm();else selectBus(191)}if(e.key==='2'){if(document.getElementById('confirm').classList.contains('active')&&selectedBus===400)confirm();else selectBus(400)}});</script></body></html>
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Accessibility Kiosk</title>
+
+    <style>
+        :root {
+            --blue: #0068a9;
+            --ink: #172b3a;
+            --muted: #617383;
+            --line: #d5e0e7;
+            --pale: #edf6fb;
+            --green: #137a49;
+            --red: #b93636;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            font-family: Arial, sans-serif;
+            color: var(--ink);
+            background: #d9e1e7;
+        }
+
+        body {
+            display: grid;
+            place-items: center;
+        }
+
+        .kiosk {
+            width: 1024px;
+            height: 600px;
+            background: #fff;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 12px 35px #0002;
+        }
+
+        header {
+            height: 72px;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 34px;
+        }
+
+        .brand {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .brandmark {
+            width: 40px;
+            height: 40px;
+            background: var(--blue);
+            color: #fff;
+            display: grid;
+            place-items: center;
+            font-weight: 800;
+        }
+
+        .brand h1 {
+            font-size: 20px;
+            margin: 0;
+        }
+
+        .brand p {
+            font-size: 12px;
+            color: var(--muted);
+            margin: 3px 0;
+        }
+
+        .status {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .clock {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--ink);
+            margin-left: 15px;
+        }
+
+        .screen {
+            height: 472px;
+            padding: 32px 58px;
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        .center {
+            text-align: center;
+        }
+
+        .kicker {
+            font-size: 12px;
+            color: var(--blue);
+            font-weight: 800;
+            letter-spacing: 0.75px;
+            text-transform: uppercase;
+            margin-bottom: 9px;
+        }
+
+        .headline {
+            font-size: 34px;
+            line-height: 1.14;
+            margin: 0;
+        }
+
+        .lead {
+            font-size: 16px;
+            color: var(--muted);
+            line-height: 1.45;
+            max-width: 700px;
+            margin: 9px auto;
+        }
+
+        .actions {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 28px;
+        }
+
+        .lang,
+        .bus-choice {
+            border: 1px solid var(--line);
+            background: #fff;
+            cursor: pointer;
+        }
+
+        .lang {
+            width: 188px;
+            height: 82px;
+            text-align: left;
+            padding: 16px 18px;
+        }
+
+        .lang strong {
+            display: block;
+            font-size: 18px;
+        }
+
+        .lang span {
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .assist-strip {
+            position: absolute;
+            bottom: 72px;
+            left: 58px;
+            right: 58px;
+            border-top: 1px solid var(--line);
+            padding-top: 13px;
+            display: flex;
+            justify-content: center;
+            gap: 28px;
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .nfc-wrap {
+            max-width: 730px;
+            margin: 25px auto;
+        }
+
+        .tap-panel {
+            border: 1px solid var(--line);
+            background: #f8fafb;
+            padding: 28px 34px;
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            text-align: left;
+        }
+
+        .nfc-reader {
+            width: 126px;
+            height: 126px;
+            border: 3px solid var(--blue);
+            background: var(--pale);
+            display: grid;
+            place-items: center;
+            flex: none;
+        }
+
+        .nfc-symbol {
+            font-weight: 800;
+            color: var(--blue);
+            font-size: 28px;
+        }
+
+        .tap-copy h3 {
+            font-size: 25px;
+            margin: 0 0 8px;
+        }
+
+        .tap-copy p {
+            color: var(--muted);
+            line-height: 1.45;
+        }
+
+        .waiting {
+            margin-top: 18px;
+            font-weight: 700;
+            color: var(--blue);
+        }
+
+        .demo-row {
+            display: flex;
+            gap: 18px;
+            margin-top: 20px;
+        }
+
+        .demo {
+            font-size: 12px;
+            color: var(--blue);
+            font-weight: 700;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .detected {
+            max-width: 680px;
+            margin: 55px auto;
+            border: 1px solid #b9dfcc;
+            background: #f3faf6;
+            padding: 25px;
+        }
+
+        .detected .check {
+            font-size: 27px;
+            color: var(--green);
+            font-weight: 800;
+        }
+
+        .detected p {
+            color: var(--muted);
+        }
+
+        .greeting {
+            max-width: 760px;
+            margin: 22px auto;
+            text-align: left;
+            border-left: 5px solid var(--green);
+            background: #f3faf6;
+            padding: 20px 24px;
+        }
+
+        .greeting h2 {
+            font-size: 29px;
+            margin: 0;
+        }
+
+        .greeting p {
+            color: var(--muted);
+            margin: 6px 0;
+        }
+
+        .physical-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 18px;
+            margin-top: 20px;
+        }
+
+        .bus-choice {
+            width: 250px;
+            min-height: 125px;
+            padding: 18px;
+            text-align: left;
+            position: relative;
+        }
+
+        .bus-choice .num {
+            font-size: 40px;
+            font-weight: 800;
+            color: var(--blue);
+        }
+
+        .desc {
+            font-size: 13px;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+
+        .button-tag {
+            position: absolute;
+            right: 16px;
+            bottom: 16px;
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--blue);
+            border: 1px solid #a9cbe0;
+            padding: 5px 8px;
+            background: var(--pale);
+        }
+
+        .error {
+            max-width: 700px;
+            margin: 32px auto;
+            border-left: 5px solid var(--red);
+            background: #fff6f6;
+            padding: 21px 25px;
+            text-align: left;
+        }
+
+        .error h2 {
+            margin: 0;
+        }
+
+        .hotline {
+            font-size: 25px;
+            font-weight: 800;
+            margin-top: 15px;
+        }
+
+        .hotline small {
+            font-size: 12px;
+            font-weight: 400;
+            color: var(--muted);
+        }
+
+        .secondary {
+            margin-top: 20px;
+            padding: 11px 17px;
+            border: 1px solid var(--line);
+            background: #fff;
+            color: var(--blue);
+            font-weight: 700;
+        }
+
+        .bus-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            margin-top: 24px;
+        }
+
+        .bus-card {
+            border: 1px solid var(--line);
+            padding: 23px;
+            min-height: 230px;
+        }
+
+        .bus-number {
+            font-size: 55px;
+            font-weight: 800;
+            color: var(--blue);
+        }
+
+        .bus-name {
+            font-weight: 700;
+            margin-top: 10px;
+        }
+
+        .direction {
+            font-size: 14px;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+
+        .arrival-row {
+            border-top: 1px solid var(--line);
+            margin-top: 19px;
+            padding-top: 15px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .arrival {
+            font-size: 25px;
+            color: var(--green);
+            font-weight: 800;
+        }
+
+        .physical {
+            font-size: 11px;
+            color: var(--blue);
+            font-weight: 800;
+        }
+
+        .confirm {
+            max-width: 700px;
+            margin: 30px auto;
+            border: 1px solid var(--line);
+            background: #fafcfd;
+            padding: 26px 34px;
+        }
+
+        .bigbus {
+            font-size: 58px;
+            font-weight: 800;
+            color: var(--blue);
+        }
+
+        .confirm h2 {
+            font-size: 29px;
+            margin: 7px;
+        }
+
+        .confirm p {
+            color: var(--muted);
+        }
+
+        .confirm-key {
+            display: inline-block;
+            background: var(--blue);
+            color: #fff;
+            padding: 13px 23px;
+            font-weight: 800;
+            margin-top: 15px;
+            border: 0;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        .confirm-key:hover {
+            filter: brightness(0.92);
+        }
+
+        .change {
+            display: block;
+            margin: 15px auto;
+            border: 0;
+            background: none;
+            color: var(--blue);
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .arrival-screen {
+            max-width: 850px;
+            margin: 45px auto;
+            display: grid;
+            grid-template-columns: 220px 1fr;
+            gap: 34px;
+            align-items: center;
+        }
+
+        .arrival-badge {
+            border: 1px solid var(--line);
+            padding: 25px;
+            text-align: center;
+        }
+
+        .arrival-badge .n {
+            font-size: 70px;
+            color: var(--blue);
+            font-weight: 800;
+        }
+
+        .arrival-info h2 {
+            font-size: 30px;
+            margin: 0;
+        }
+
+        .dest {
+            font-size: 18px;
+            color: var(--muted);
+            margin-top: 5px;
+        }
+
+        .next {
+            margin-top: 24px;
+            background: #f3faf6;
+            border-left: 5px solid var(--green);
+            padding: 18px 22px;
+        }
+
+        .next small {
+            display: block;
+            color: var(--muted);
+        }
+
+        .next strong {
+            font-size: 31px;
+            color: var(--green);
+        }
+
+        .thankyou {
+            margin-top: 22px;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .audio {
+            font-size: 13px;
+            color: var(--muted);
+            margin-top: 8px;
+        }
+
+        .instruction {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 56px;
+            background: #f3f6f8;
+            border-top: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .instruction:before {
+            content: '●';
+            color: var(--blue);
+            margin-right: 10px;
+        }
+
+        @media (max-width: 800px) {
+            .kiosk {
+                width: 100vw;
+                height: 100vh;
+            }
+
+            .screen {
+                padding: 25px;
+            }
+
+            .bus-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tap-panel {
+                width: 100%;
+            }
+
+            .actions,
+            .physical-buttons {
+                flex-wrap: wrap;
+            }
+
+            .arrival-screen {
+                grid-template-columns: 1fr;
+            }
+
+            .assist-strip {
+                left: 25px;
+                right: 25px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="kiosk">
+
+        <header>
+            <div class="brand">
+                <div class="brandmark">A</div>
+
+                <div>
+                    <h1>Accessibility Kiosk</h1>
+                    <p>Accessible bus travel assistance</p>
+                </div>
+            </div>
+
+            <div class="status">
+                ● <span id="statusText">Ready</span>
+                <span class="clock" id="clock">09:00</span>
+            </div>
+        </header>
+
+
+        <!-- WELCOME SCREEN -->
+        <section id="welcome" class="screen active center">
+
+            <div style="margin-top: 30px">
+                <div class="kicker">Welcome</div>
+
+                <h2 class="headline">
+                    Welcome to the<br>
+                    Accessibility Kiosk
+                </h2>
+
+                <p class="lead">
+                    Get personalised bus information and travel assistance.
+                </p>
+            </div>
+
+            <div class="kicker" style="margin-top: 38px">
+                Select your language
+            </div>
+
+            <div class="actions">
+
+                <button class="lang" onclick="chooseLang('en')">
+                    <strong>English</strong>
+                    <span>English</span>
+                </button>
+
+                <button class="lang" onclick="chooseLang('zh')">
+                    <strong>中文</strong>
+                    <span>Chinese</span>
+                </button>
+
+                <button class="lang" onclick="chooseLang('ms')">
+                    <strong>Bahasa Melayu</strong>
+                    <span>Malay</span>
+                </button>
+
+                <button class="lang" onclick="chooseLang('ta')">
+                    <strong>தமிழ்</strong>
+                    <span>Tamil</span>
+                </button>
+
+            </div>
+
+            <div class="assist-strip">
+                <span>High-contrast display</span>
+                <span>Physical-button controls</span>
+                <span>Audio assistance available</span>
+            </div>
+
+        </section>
+
+
+        <!-- NFC SCREEN -->
+        <section id="nfc" class="screen center">
+
+            <div class="kicker">
+                STEP 2 — IDENTIFY
+            </div>
+
+            <h2 class="headline">
+                Tap your accessibility card
+            </h2>
+
+            <p class="lead">
+                Hold your registered NFC card against the reader.
+                Keep it there until the card is detected.
+            </p>
+
+            <div class="nfc-wrap">
+
+                <div class="tap-panel">
+
+                    <div class="nfc-reader">
+                        <div class="nfc-symbol">NFC</div>
+                    </div>
+
+                    <div class="tap-copy">
+
+                        <h3>Tap card once</h3>
+
+                        <p>
+                            The kiosk will check your accessibility profile
+                            and continue automatically.
+                        </p>
+
+                        <div class="waiting">
+                            Waiting for card…
+                        </div>
+
+                        <div class="demo-row">
+
+                            <span
+                                class="demo"
+                                onclick="identify(true)"
+                            >
+                                Demo: registered card
+                            </span>
+
+                            <span
+                                class="demo"
+                                onclick="identify(false)"
+                            >
+                                Demo: unregistered card
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- CARD DETECTED SCREEN -->
+        <section id="detected" class="screen center">
+
+            <div class="kicker">
+                CARD DETECTED
+            </div>
+
+            <div class="detected">
+
+                <div class="check">
+                    Card recognised
+                </div>
+
+                <p>
+                    Checking your accessibility profile…
+                </p>
+
+            </div>
+
+        </section>
+
+
+        <!-- REGISTERED USER SCREEN -->
+        <section id="registered" class="screen center">
+
+            <div class="kicker">
+                READY
+            </div>
+
+            <div class="greeting">
+
+                <h2>
+                    Hi, Bhuvana.
+                </h2>
+
+                <p>
+                    Your accessibility profile has been recognised.
+                </p>
+
+            </div>
+
+            <h2
+                class="headline"
+                style="font-size: 29px"
+            >
+                What bus would you like to take today?
+            </h2>
+
+            <p class="lead">
+                Use the physical button beside your preferred service.
+            </p>
+
+            <div class="physical-buttons">
+
+                <button
+                    class="bus-choice"
+                    onclick="selectBus(191)"
+                >
+
+                    <div class="num">
+                        191
+                    </div>
+
+                    <div class="desc">
+                        Towards one-north
+                    </div>
+
+                    <div class="button-tag">
+                        BUTTON 1
+                    </div>
+
+                </button>
+
+
+                <button
+                    class="bus-choice"
+                    onclick="selectBus(400)"
+                >
+
+                    <div class="num">
+                        400
+                    </div>
+
+                    <div class="desc">
+                        Towards Marina Bay
+                    </div>
+
+                    <div class="button-tag">
+                        BUTTON 2
+                    </div>
+
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- UNREGISTERED SCREEN -->
+        <section id="unregistered" class="screen center">
+
+            <div class="kicker">
+                CARD NOT RECOGNISED
+            </div>
+
+            <div class="error">
+
+                <h2>
+                    User not registered
+                </h2>
+
+                <p>
+                    We could not find your card in the accessibility
+                    kiosk system.
+                </p>
+
+                <div class="hotline">
+                    1800 2255 582
+
+                    <small>
+                        LTA Customer Service
+                    </small>
+                </div>
+
+                <p>
+                    Please contact LTA for assistance with public
+                    transport-related enquiries.
+                </p>
+
+            </div>
+
+            <button
+                class="secondary"
+                onclick="go('welcome')"
+            >
+                Return to start
+            </button>
+
+        </section>
+
+
+        <!-- BUS SELECTION SCREEN -->
+        <section id="buses" class="screen">
+
+            <div class="kicker">
+                BUS SERVICES
+            </div>
+
+            <h2
+                class="headline"
+                style="font-size: 30px"
+            >
+                Choose your bus
+            </h2>
+
+            <p
+                class="lead"
+                style="margin: 6px 0"
+            >
+                Press the physical button beside your preferred service.
+            </p>
+
+            <div class="bus-grid">
+
+                <!-- BUS 191 -->
+                <div
+                    id="bus191"
+                    class="bus-card"
+                    onclick="selectBus(191)"
+                >
+
+                    <div class="bus-number">
+                        191
+                    </div>
+
+                    <div class="bus-name">
+                        Bus Service 191
+                    </div>
+
+                    <div class="direction">
+                        Towards one-north
+                    </div>
+
+                    <div class="arrival-row">
+
+                        <div>
+
+                            <small>
+                                Next bus
+                            </small>
+
+                            <div class="arrival">
+                                5 min
+                            </div>
+
+                        </div>
+
+                        <div class="physical">
+                            BUTTON 1
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- BUS 400 -->
+                <div
+                    id="bus400"
+                    class="bus-card"
+                    onclick="selectBus(400)"
+                >
+
+                    <div class="bus-number">
+                        400
+                    </div>
+
+                    <div class="bus-name">
+                        Bus Service 400
+                    </div>
+
+                    <div class="direction">
+                        Towards Marina Bay
+                    </div>
+
+                    <div class="arrival-row">
+
+                        <div>
+
+                            <small>
+                                Next bus
+                            </small>
+
+                            <div class="arrival">
+                                8 min
+                            </div>
+
+                        </div>
+
+                        <div class="physical">
+                            BUTTON 2
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- CONFIRMATION SCREEN -->
+        <section id="confirm" class="screen center">
+
+            <div class="confirm">
+
+                <div class="kicker">
+                    CONFIRM
+                </div>
+
+                <div
+                    class="bigbus"
+                    id="confirmBus"
+                >
+                    191
+                </div>
+
+                <h2 id="confirmTitle">
+                    Take Bus 191?
+                </h2>
+
+                <p>
+                    Press the <b>same physical button again</b>
+                    to confirm.
+                </p>
+
+                <button
+                    class="confirm-key"
+                    id="confirmKey"
+                    onclick="confirm()"
+                >
+                    BUTTON 1 — CONFIRM
+                </button>
+
+                <button
+                    class="change"
+                    onclick="go('buses')"
+                >
+                    Press the other bus button to change
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- ARRIVAL SCREEN -->
+        <section id="arrival" class="screen">
+
+            <div class="arrival-screen">
+
+                <div class="arrival-badge">
+
+                    <div class="kicker">
+                        YOUR BUS
+                    </div>
+
+                    <div
+                        class="n"
+                        id="arrivalBus"
+                    >
+                        191
+                    </div>
+
+                </div>
+
+
+                <div class="arrival-info">
+
+                    <div class="kicker">
+                        BUS SELECTED
+                    </div>
+
+                    <h2 id="arrivalTitle">
+                        Bus 191
+                    </h2>
+
+                    <div
+                        class="dest"
+                        id="arrivalDest"
+                    >
+                        Towards one-north
+                    </div>
+
+
+                    <div class="next">
+
+                        <small>
+                            Your bus will arrive in
+                        </small>
+
+                        <strong id="arrivalTime">
+                            5 min
+                        </strong>
+
+                    </div>
+
+
+                    <div class="access">
+                        Accessibility support is available.
+                        Audio assistance will also provide the same
+                        information through the attached speaker.
+                    </div>
+
+
+                    <div class="thankyou">
+                        Thank you for using our service.
+                    </div>
+
+
+                    <div class="audio">
+                        Audio message:
+                        “Your bus will arrive in 5 minutes.
+                        Thank you for using our service.”
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- BOTTOM INSTRUCTION BAR -->
+        <div
+            class="instruction"
+            id="instruction"
+        >
+            Select a language to begin
+        </div>
+
+    </div>
+
+
+    <script>
+
+        let selectedBus = null;
+
+        const data = {
+
+            191: {
+                dest: 'Towards one-north',
+                time: '5 minutes',
+                button: 'BUTTON 1'
+            },
+
+            400: {
+                dest: 'Towards Marina Bay',
+                time: '8 minutes',
+                button: 'BUTTON 2'
+            }
+
+        };
+
+
+        function go(id) {
+
+            document
+                .querySelectorAll('.screen')
+                .forEach(x => x.classList.remove('active'));
+
+            document
+                .getElementById(id)
+                .classList.add('active');
+
+
+            const messages = {
+
+                welcome:
+                    'Select a language to begin',
+
+                nfc:
+                    'Tap your registered NFC card on the reader',
+
+                detected:
+                    'Card detected — checking your profile',
+
+                registered:
+                    'Use the physical button beside your preferred service',
+
+                unregistered:
+                    'Please contact LTA Customer Service for assistance',
+
+                buses:
+                    'Press the physical button beside your preferred service',
+
+                confirm:
+                    'Press the same physical button again to confirm',
+
+                arrival:
+                    'Please wait for your bus'
+
+            };
+
+
+            document
+                .getElementById('instruction')
+                .textContent = messages[id] || '';
+
+
+            document
+                .getElementById('statusText')
+                .textContent =
+                id === 'welcome'
+                    ? 'Ready'
+                    : id === 'arrival'
+                        ? 'Journey ready'
+                        : 'Assistance mode';
+
+        }
+
+
+        function chooseLang() {
+            go('nfc');
+        }
+
+
+        function identify(registered) {
+
+            if (!registered) {
+                go('unregistered');
+                return;
+            }
+
+            go('detected');
+
+            setTimeout(
+                () => go('registered'),
+                1200
+            );
+
+        }
+
+
+        function selectBus(bus) {
+
+            selectedBus = bus;
+
+            document
+                .getElementById('confirmBus')
+                .textContent = bus;
+
+            document
+                .getElementById('confirmTitle')
+                .textContent = 'Take Bus ' + bus + '?';
+
+            document
+                .getElementById('confirmKey')
+                .textContent =
+                data[bus].button + ' — CONFIRM';
+
+            go('confirm');
+
+        }
+
+
+        function confirm() {
+
+            if (!selectedBus) {
+                return;
+            }
+
+            document
+                .getElementById('arrivalBus')
+                .textContent = selectedBus;
+
+            document
+                .getElementById('arrivalTitle')
+                .textContent = 'Bus ' + selectedBus;
+
+            document
+                .getElementById('arrivalDest')
+                .textContent =
+                data[selectedBus].dest;
+
+            document
+                .getElementById('arrivalTime')
+                .textContent =
+                data[selectedBus].time;
+
+            go('arrival');
+
+            speak(
+                'Your bus, ' +
+                selectedBus +
+                ', will arrive in ' +
+                data[selectedBus].time +
+                '. Thank you for using our service.'
+            );
+
+        }
+
+
+        function speak(text) {
+
+            if ('speechSynthesis' in window) {
+
+                speechSynthesis.cancel();
+
+                speechSynthesis.speak(
+                    new SpeechSynthesisUtterance(text)
+                );
+
+            }
+
+        }
+
+
+        function updateClock() {
+
+            document
+                .getElementById('clock')
+                .textContent =
+                new Date().toLocaleTimeString(
+                    'en-SG',
+                    {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                    }
+                );
+
+        }
+
+
+        updateClock();
+
+        setInterval(
+            updateClock,
+            1000
+        );
+
+
+        // Physical keyboard button simulation
+        document.addEventListener(
+            'keydown',
+            e => {
+
+                if (e.key === '1') {
+
+                    if (
+                        document
+                            .getElementById('confirm')
+                            .classList
+                            .contains('active') &&
+                        selectedBus === 191
+                    ) {
+
+                        confirm();
+
+                    } else {
+
+                        selectBus(191);
+
+                    }
+
+                }
+
+
+                if (e.key === '2') {
+
+                    if (
+                        document
+                            .getElementById('confirm')
+                            .classList
+                            .contains('active') &&
+                        selectedBus === 400
+                    ) {
+
+                        confirm();
+
+                    } else {
+
+                        selectBus(400);
+
+                    }
+
+                }
+
+            }
+        );
+
+    </script>
+
+</body>
+
+</html>
