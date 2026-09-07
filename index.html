@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Accessible Bus Kiosk</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#dff3f2;font-family:Arial,sans-serif;color:#17323a;display:grid;place-items:center}.kiosk{width:1024px;max-width:100vw;height:600px;max-height:100vh;background:#fff;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.15)}header{height:104px;background:#075e68;color:#fff;padding:20px 36px;display:flex;align-items:center;justify-content:space-between}.brand{display:flex;align-items:center;gap:16px}.icon{font-size:38px;background:#ffd447;border-radius:14px;padding:8px 13px}.brand h1{margin:0;font-size:28px}.brand p{margin:5px 0;font-size:15px}.clock{text-align:right}.clock b{font-size:26px}.clock small{display:block}.content{padding:28px 36px}.title{font-size:30px;font-weight:800}.sub{font-size:17px;color:#60747b;margin:6px 0 22px}.cards{display:grid;grid-template-columns:1fr 1fr;gap:22px}.card{border:4px solid #d5e5e7;border-radius:20px;padding:25px;min-height:280px}.num{font-size:68px;font-weight:900;color:#075e68}.service{font-size:20px;font-weight:800;margin-top:12px}.direction{color:#65767c;margin-top:5px}.row{display:flex;justify-content:space-between;align-items:center;margin-top:30px}.arrival{font-size:28px;font-weight:900;color:#07845c}.button{background:#ffd447;padding:10px 14px;border-radius:10px;font-weight:900}.note{margin-top:25px;background:#eff9f8;border:3px solid #b9e0df;border-radius:18px;padding:18px;text-align:center;font-size:18px;font-weight:700}footer{position:absolute;bottom:0;width:min(1024px,100vw);height:55px;background:#eef5f5;padding:0 36px;display:flex;justify-content:space-between;align-items:center;color:#53676e;font-size:14px}.help{font-weight:800}@media(max-width:700px){.cards{grid-template-columns:1fr}.kiosk{height:100vh;overflow:auto}footer{position:fixed}}
+</style>
+</head>
+<body>
+<div class="kiosk">
+<header><div class="brand"><div class="icon">🚌</div><div><h1>ACCESSIBLE BUS KIOSK</h1><p>Choose your bus service</p></div></div><div class="clock"><b>09:00</b><small>Singapore</small></div></header>
+<main class="content"><div class="title">Which bus would you like?</div><div class="sub">Press the physical button beside your chosen bus.</div><div class="cards"><div class="card"><div class="num">199</div><div class="service">Bus Service 199</div><div class="direction">Towards Boon Lay</div><div class="row"><div class="arrival">5 min</div><div class="button">BUTTON 1</div></div></div><div class="card"><div class="num">400</div><div class="service">Bus Service 400</div><div class="direction">Towards Marina Bay</div><div class="row"><div class="arrival">8 min</div><div class="button">BUTTON 2</div></div></div></div><div class="note">🔊 Audio assistance available &nbsp; • &nbsp; 🌐 Language support &nbsp; • &nbsp; ❓ Need help?</div></main>
+<footer><div class="help">❓ Need help? Press the assistance button.</div><div>7-inch LCD • 1024 × 600</div></footer>
+</div>
+</body>
+</html>
