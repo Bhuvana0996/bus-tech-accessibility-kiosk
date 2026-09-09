@@ -15,18 +15,11 @@ iframe{display:block;width:1024px;height:600px;border:0}
 const frame=document.getElementById('ui');
 let ws=null;
 let wrapped=false;
-let currentLang='en';
 
 function ui(){return frame.contentWindow}
 function activeScreen(){
   try{return frame.contentDocument.querySelector('.screen.active')?.id||''}
   catch(e){return ''}
-}
-
-function send(data){
-  if(ws && ws.readyState===WebSocket.OPEN){
-    ws.send(JSON.stringify(data));
-  }
 }
 
 function wrapUI(){
@@ -35,23 +28,15 @@ function wrapUI(){
   if(!w || typeof w.chooseLang!=='function')return;
   wrapped=true;
 
-  const choose=w.chooseLang;
-  w.chooseLang=function(lang){
-    currentLang=lang;
-    send({event:'language',lang});
-    return choose(lang);
-  };
+  // Language and speech are handled entirely by index.html.
+  // This wrapper only connects physical hardware events to the UI.
 
   const reset=w.resetSession;
   if(typeof reset==='function'){
     w.resetSession=function(){
-      currentLang='en';
-      send({event:'language',lang:'en'});
       return reset();
     };
   }
-
-  send({event:'language',lang:currentLang});
 }
 
 function handleButton(button){
@@ -78,8 +63,6 @@ function handleButton(button){
 function connect(){
   ws=new WebSocket(`ws://${location.host}/ws`);
 
-  ws.onopen=()=>send({event:'language',lang:currentLang});
-
   ws.onmessage=(message)=>{
     let data;
     try{data=JSON.parse(message.data)}catch(e){return}
@@ -87,8 +70,6 @@ function connect(){
     if(data.event==='backend_ready')return;
 
     if(data.event==='nfc_registered'){
-      // The UI already owns the accessibility-profile display.
-      // Backend only tells it that a registered card was detected.
       if(activeScreen()==='nfc')ui().identify(true);
       return;
     }
