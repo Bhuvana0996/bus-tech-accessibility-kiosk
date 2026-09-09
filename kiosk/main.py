@@ -47,8 +47,17 @@ class KioskServer:
     def on_nfc(self, uid):
         user = lookup_card(uid)
         if user:
-            self.emit_from_thread("nfc_registered", uid=uid, name=user["name"])
-            speak(self.language, f"Hi {user['name']}. Your accessibility profile has been recognised. Please select your bus.")
+            accessibility = user.get("accessibility") or "Not specified"
+            self.emit_from_thread(
+                "nfc_registered",
+                uid=uid,
+                name=user["name"],
+                accessibility=accessibility,
+            )
+            speak(
+                self.language,
+                f"Hi {user['name']}. Your accessibility profile is {accessibility}. Please select your bus.",
+            )
         else:
             self.emit_from_thread("nfc_unregistered", uid=uid)
             speak(self.language, "This card is not registered. Please contact LTA Customer Service at 1800 2255 582.")
@@ -79,7 +88,7 @@ class KioskServer:
                         "en": f"Take Bus {bus}? Press the same physical button again to confirm.",
                         "zh": f"乘坐 {bus} 号巴士？请再次按下相同的实体按钮确认。",
                         "ms": f"Naik Bas {bus}? Tekan butang fizikal yang sama sekali lagi untuk mengesahkan.",
-                        "ta": f"{bus} பேருந்தில் செல்லவா? உறுதிப்படுத்த அதே இயற்பியல் பொத்தானை மீண்டும் அழுத்தவும்.",
+                        "ta": f"{bus} பேருந்தில் செல்லவா? உறுதிப்படுத்த அதே இயற்பியல் பொத்தானை மீண்டும் அழுத்தவும்。",
                     }
                     speak(self.language, texts.get(self.language, texts["en"]))
                 elif event == "confirm_bus":
