@@ -8,7 +8,6 @@ from typing import Set
 
 from aiohttp import web
 
-from audio import speak
 from database import lookup_card
 from nfc import NFCReader
 from pico import PicoReader
@@ -30,7 +29,9 @@ class KioskServer:
 
     def emit_from_thread(self, event, **data):
         if self.loop:
-            asyncio.run_coroutine_threadsafe(self.broadcast(event, **data), self.loop)
+            asyncio.run_coroutine_threadsafe(
+                self.broadcast(event, **data), self.loop
+            )
 
     async def broadcast(self, event, **data):
         payload = {"event": event, **data}
@@ -47,20 +48,16 @@ class KioskServer:
     def on_nfc(self, uid):
         user = lookup_card(uid)
         if user:
-            accessibility = user.get("accessibility") or "Not specified"
+            # Accessibility needs are sent to the UI for visual display only.
+            # They are intentionally NOT spoken aloud.
             self.emit_from_thread(
                 "nfc_registered",
                 uid=uid,
                 name=user["name"],
-                accessibility=accessibility,
-            )
-            speak(
-                self.language,
-                f"Hi {user['name']}. Your accessibility profile is {accessibility}. Please select your bus.",
+                accessibility=user.get("accessibility") or "Not specified",
             )
         else:
             self.emit_from_thread("nfc_unregistered", uid=uid)
-            speak(self.language, "This card is not registered. Please contact LTA Customer Service at 1800 2255 582.")
 
     def on_button(self, button):
         self.emit_from_thread("button", button=button)
@@ -79,28 +76,10 @@ class KioskServer:
                     data = msg.json()
                 except Exception:
                     continue
+
                 event = data.get("event")
                 if event == "language":
                     self.language = data.get("lang", "en")
-                elif event == "select_bus":
-                    bus = int(data.get("bus", 191))
-                    texts = {
-                        "en": f"Take Bus {bus}? Press the same physical button again to confirm.",
-                        "zh": f"乘坐 {bus} 号巴士？请再次按下相同的实体按钮确认。",
-                        "ms": f"Naik Bas {bus}? Tekan butang fizikal yang sama sekali lagi untuk mengesahkan.",
-                        "ta": f"{bus} பேருந்தில் செல்லவா? உறுதிப்படுத்த அதே இயற்பியல் பொத்தானை மீண்டும் அழுத்தவும்。",
-                    }
-                    speak(self.language, texts.get(self.language, texts["en"]))
-                elif event == "confirm_bus":
-                    bus = int(data.get("bus", 191))
-                    mins = 5 if bus == 191 else 8
-                    texts = {
-                        "en": f"Bus {bus} will arrive in {mins} minutes. Thank you for using our service.",
-                        "zh": f"{bus}号巴士将在{mins}分钟后到达。感谢您使用我们的服务。",
-                        "ms": f"Bas {bus} akan tiba dalam {mins} minit. Terima kasih kerana menggunakan perkhidmatan kami.",
-                        "ta": f"{bus} பேருந்து {mins} நிமிடங்களில் வரும். எங்கள் சேவையைப் பயன்படுத்தியதற்கு நன்றி.",
-                    }
-                    speak(self.language, texts.get(self.language, texts["en"]))
         finally:
             self.clients.discard(ws)
         return ws
