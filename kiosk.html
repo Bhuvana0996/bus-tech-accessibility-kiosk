@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1024,height=600,initial-scale=1">
+<title>Accessibility Kiosk — Hardware Bridge</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#fff}
+iframe{display:block;width:1024px;height:600px;border:0}
+</style>
+</head>
+<body>
+<iframe id="ui" src="index.html" title="Accessibility Kiosk"></iframe>
+<script>
+const frame=document.getElementById('ui');
+let ws=null;
+let wrapped=false;
+
+function ui(){return frame.contentWindow}
+function activeScreen(){
+  try{return frame.contentDocument.querySelector('.screen.active')?.id||''}catch(e){return ''}
+}
+
+function send(data){
+  if(ws && ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify(data));
+}
+
+function wrapUI(){
+  if(wrapped) return;
+  const w=ui();
+  if(!w || typeof w.chooseLang!=='function') return;
+  wrapped=true;
+
+  const choose=w.chooseLang;
+  w.chooseLang=function(lang){
+    send({event:'language',lang});
+    return choose(lang);
+  };
+
+  const select=w.selectBus;
+  w.selectBus=function(bus){
+    send({event:'select_bus',bus});
+    return select(bus);
+  };
+
+  const confirm=w.confirmBusSelection;
+  w.confirmBusSelection=function(){
+    const bus=Number(w.document.getElementById('confirmBus')?.textContent||191);
+    send({event:'confirm_bus',bus});
+    return confirm();
+  };
+
+  send({event:'language',lang:w.selectedLanguage||'en'});
+}
+
+function handleButton(button){
+  const w=ui();
+  if(!w) return;
+  const bus=button==='BUTTON1'?191:400;
+  const screen=activeScreen();
+
+  if(screen==='confirm'){
+    const selected=Number(w.document.getElementById('confirmBus')?.textContent||0);
+    if(selected===bus){
+      w.confirmBusSelection();
+    }else{
+      w.selectBus(bus);
+    }
+    return;
+  }
+
+  if(screen==='registered' || screen==='buses'){
+    w.selectBus(bus);
+  }
+}
+
+function connect(){
+  ws=new WebSocket(`ws://${location.host}/ws`);
+  ws.onopen=()=>send({event:'language',lang:'en'});
+  ws.onmessage=(message)=>{
+    let data;
+    try{data=JSON.parse(message.data)}catch(e){return}
+    if(data.event==='backend_ready') return;
+    if(data.event==='nfc_registered'){
+      if(activeScreen()==='nfc') ui().identify(true);
+      return;
+    }
+    if(data.event==='nfc_unregistered'){
+      if(activeScreen()==='nfc') ui().identify(false);
+      return;
+    }
+    if(data.event==='button'){
+      handleButton(data.button);
+    }
+  };
+  ws.onclose=()=>setTimeout(connect,1000);
+}
+
+frame.addEventListener('load',()=>{
+  setInterval(wrapUI,250);
+});
+connect();
+</script>
+</body>
+</html>
