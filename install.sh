@@ -12,10 +12,9 @@ fi
 
 echo "==> Installing Raspberry Pi kiosk dependencies"
 sudo apt update
-sudo apt install -y python3-venv python3-pip espeak-ng chromium
+sudo apt install -y python3-venv python3-pip chromium
 
-# PN532 is configured for SPI in this project. Raspberry Pi documents
-# do_spi 0 as the non-interactive way to enable SPI.
+# PN532 is configured for SPI in this project.
 if command -v raspi-config >/dev/null 2>&1; then
   sudo raspi-config nonint do_spi 0
 fi
@@ -28,8 +27,7 @@ fi
 "$APP_DIR/.venv/bin/python" -m pip install --upgrade pip
 "$APP_DIR/.venv/bin/pip" install -r "$APP_DIR/requirements.txt"
 
-# Run the hardware bridge as a system service so NFC + Pico are alive even
-# before Chromium is launched.
+# Run the hardware bridge as a system service so NFC + Pico are always ready.
 sudo tee /etc/systemd/system/accessibility-kiosk.service >/dev/null <<EOF
 [Unit]
 Description=Accessibility Kiosk Hardware Bridge
@@ -51,8 +49,7 @@ EOF
 sudo systemctl daemon-reload
 sudo systemctl enable --now accessibility-kiosk.service
 
-# Raspberry Pi OS Bookworm uses labwc/Wayland by default. Launch Chromium
-# locally after the desktop session starts.
+# Launch the local hardware-connected kiosk in Chromium on Raspberry Pi OS.
 mkdir -p "$RUN_HOME/.config/labwc"
 AUTOSTART="$RUN_HOME/.config/labwc/autostart"
 touch "$AUTOSTART"
@@ -65,7 +62,6 @@ EOF
 fi
 chown "$RUN_USER:$RUN_USER" "$AUTOSTART"
 
-# Prevent the screen from blanking during the kiosk session.
 if command -v raspi-config >/dev/null 2>&1; then
   sudo raspi-config nonint do_blanking 1 || true
 fi
@@ -75,6 +71,4 @@ echo "=================================================="
 echo "Accessibility Kiosk installation complete."
 echo "Backend: http://127.0.0.1:8000/health"
 echo "UI:      http://127.0.0.1:8000/kiosk.html"
-echo
-echo "Next: connect the PN532 and Pico, then reboot."
 echo "=================================================="
