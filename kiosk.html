@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=1024,height=600,initial-scale=1">
-<title>Accessibility Kiosk — Hardware Bridge</title>
+<title>Accessibility Kiosk</title>
 <style>
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#fff}
 iframe{display:block;width:1024px;height:600px;border:0}
@@ -16,59 +16,23 @@ const frame=document.getElementById('ui');
 let ws=null;
 let wrapped=false;
 let currentLang='en';
-let profilePanel=null;
 
 function ui(){return frame.contentWindow}
 function activeScreen(){
-  try{return frame.contentDocument.querySelector('.screen.active')?.id||''}catch(e){return ''}
+  try{return frame.contentDocument.querySelector('.screen.active')?.id||''}
+  catch(e){return ''}
 }
 
 function send(data){
-  if(ws && ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify(data));
-}
-
-function profileDetails(profile){
-  const p=(profile||'Not specified').trim();
-  const lower=p.toLowerCase();
-  if(lower.includes('pregnan')) return {icon:'🤰',en:'Pregnant',zh:'孕妇',ms:'Hamil',ta:'கர்ப்பிணி'};
-  if(lower.includes('blind')||lower.includes('low vision')) return {icon:'👁',en:'Blind / low vision',zh:'失明 / 低视力',ms:'Buta / penglihatan terhad',ta:'பார்வையற்றவர் / குறைந்த பார்வை'};
-  if(lower.includes('deaf')||lower.includes('hard of hearing')) return {icon:'🦻',en:'Deaf / hard of hearing',zh:'聋 / 听力障碍',ms:'Pekak / kurang pendengaran',ta:'காது கேளாதவர் / குறைந்த கேட்கும் திறன்'};
-  if(lower.includes('wheelchair')) return {icon:'♿',en:'Wheelchair user',zh:'轮椅使用者',ms:'Pengguna kerusi roda',ta:'சக்கர நாற்காலி பயன்படுத்துபவர்'};
-  if(lower.includes('crutch')||lower.includes('mobility')) return {icon:'🦯',en:'Mobility aid / crutches',zh:'行动辅助 / 拐杖',ms:'Alat bantuan mobiliti / tongkat',ta:'நடமாட்ட உதவி / ஊன்றுகோல்'};
-  return {icon:'♿',en:p,zh:p,ms:p,ta:p};
-}
-
-function removeProfilePanel(){
-  try{
-    const d=frame.contentDocument;
-    d.getElementById('hardware-profile-panel')?.remove();
-  }catch(e){}
-  profilePanel=null;
-}
-
-function showAccessibilityProfile(name, profile){
-  try{
-    const d=frame.contentDocument;
-    const target=d.querySelector('#registered .greeting');
-    if(!target) return;
-
-    removeProfilePanel();
-    const details=profileDetails(profile);
-    const label={en:'ACCESSIBILITY PROFILE',zh:'无障碍资料',ms:'PROFIL AKSESIBILITI',ta:'அணுகல் சுயவிவரம்'}[currentLang]||'ACCESSIBILITY PROFILE';
-    const needLabel={en:'Support need',zh:'需求',ms:'Keperluan bantuan',ta:'உதவி தேவை'}[currentLang]||'Support need';
-
-    profilePanel=d.createElement('div');
-    profilePanel.id='hardware-profile-panel';
-    profilePanel.style.cssText='margin:14px auto 18px;max-width:760px;border:2px solid #0068a9;background:#edf6fb;padding:16px 22px;display:flex;align-items:center;gap:16px;text-align:left;border-radius:4px;';
-    profilePanel.innerHTML=`<div style="font-size:34px;line-height:1">${details.icon}</div><div><div style="font-size:11px;font-weight:800;letter-spacing:.7px;color:#0068a9;margin-bottom:4px">${label}</div><div style="font-size:21px;font-weight:800;color:#172b3a">${details[currentLang]||details.en}</div><div style="font-size:12px;color:#617383;margin-top:4px">${needLabel}</div></div>`;
-    target.insertAdjacentElement('afterend',profilePanel);
-  }catch(e){console.error('Profile display error',e)}
+  if(ws && ws.readyState===WebSocket.OPEN){
+    ws.send(JSON.stringify(data));
+  }
 }
 
 function wrapUI(){
-  if(wrapped) return;
+  if(wrapped)return;
   const w=ui();
-  if(!w || typeof w.chooseLang!=='function') return;
+  if(!w || typeof w.chooseLang!=='function')return;
   wrapped=true;
 
   const choose=w.chooseLang;
@@ -78,24 +42,10 @@ function wrapUI(){
     return choose(lang);
   };
 
-  const select=w.selectBus;
-  w.selectBus=function(bus){
-    send({event:'select_bus',bus});
-    return select(bus);
-  };
-
-  const confirm=w.confirmBusSelection;
-  w.confirmBusSelection=function(){
-    const bus=Number(w.document.getElementById('confirmBus')?.textContent||191);
-    send({event:'confirm_bus',bus});
-    return confirm();
-  };
-
   const reset=w.resetSession;
   if(typeof reset==='function'){
     w.resetSession=function(){
       currentLang='en';
-      removeProfilePanel();
       send({event:'language',lang:'en'});
       return reset();
     };
@@ -106,7 +56,7 @@ function wrapUI(){
 
 function handleButton(button){
   const w=ui();
-  if(!w) return;
+  if(!w)return;
   const bus=button==='BUTTON1'?191:400;
   const screen=activeScreen();
 
@@ -127,23 +77,30 @@ function handleButton(button){
 
 function connect(){
   ws=new WebSocket(`ws://${location.host}/ws`);
+
   ws.onopen=()=>send({event:'language',lang:currentLang});
+
   ws.onmessage=(message)=>{
     let data;
     try{data=JSON.parse(message.data)}catch(e){return}
-    if(data.event==='backend_ready') return;
+
+    if(data.event==='backend_ready')return;
+
     if(data.event==='nfc_registered'){
-      showAccessibilityProfile(data.name,data.accessibility);
-      if(activeScreen()==='nfc') ui().identify(true);
+      // The UI already owns the accessibility-profile display.
+      // Backend only tells it that a registered card was detected.
+      if(activeScreen()==='nfc')ui().identify(true);
       return;
     }
+
     if(data.event==='nfc_unregistered'){
-      removeProfilePanel();
-      if(activeScreen()==='nfc') ui().identify(false);
+      if(activeScreen()==='nfc')ui().identify(false);
       return;
     }
-    if(data.event==='button') handleButton(data.button);
+
+    if(data.event==='button')handleButton(data.button);
   };
+
   ws.onclose=()=>setTimeout(connect,1000);
 }
 
