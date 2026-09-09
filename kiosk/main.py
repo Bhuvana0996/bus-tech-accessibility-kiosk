@@ -23,7 +23,6 @@ class KioskServer:
     def __init__(self):
         self.clients: Set[web.WebSocketResponse] = set()
         self.loop = None
-        self.language = "en"
         self.nfc = NFCReader(self.on_nfc)
         self.pico = PicoReader(self.on_button)
 
@@ -72,14 +71,6 @@ class KioskServer:
             async for msg in ws:
                 if msg.type != web.WSMsgType.TEXT:
                     continue
-                try:
-                    data = msg.json()
-                except Exception:
-                    continue
-
-                event = data.get("event")
-                if event == "language":
-                    self.language = data.get("lang", "en")
         finally:
             self.clients.discard(ws)
         return ws
