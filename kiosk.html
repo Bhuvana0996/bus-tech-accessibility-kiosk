@@ -15,6 +15,7 @@ iframe{display:block;width:1024px;height:600px;border:0}
 const frame=document.getElementById('ui');
 let ws=null;
 let wrapped=false;
+let currentLang='en';
 
 function ui(){return frame.contentWindow}
 function activeScreen(){
@@ -33,6 +34,7 @@ function wrapUI(){
 
   const choose=w.chooseLang;
   w.chooseLang=function(lang){
+    currentLang=lang;
     send({event:'language',lang});
     return choose(lang);
   };
@@ -50,7 +52,16 @@ function wrapUI(){
     return confirm();
   };
 
-  send({event:'language',lang:w.selectedLanguage||'en'});
+  const reset=w.resetSession;
+  if(typeof reset==='function'){
+    w.resetSession=function(){
+      currentLang='en';
+      send({event:'language',lang:'en'});
+      return reset();
+    };
+  }
+
+  send({event:'language',lang:currentLang});
 }
 
 function handleButton(button){
@@ -76,7 +87,7 @@ function handleButton(button){
 
 function connect(){
   ws=new WebSocket(`ws://${location.host}/ws`);
-  ws.onopen=()=>send({event:'language',lang:'en'});
+  ws.onopen=()=>send({event:'language',lang:currentLang});
   ws.onmessage=(message)=>{
     let data;
     try{data=JSON.parse(message.data)}catch(e){return}
@@ -89,16 +100,12 @@ function connect(){
       if(activeScreen()==='nfc') ui().identify(false);
       return;
     }
-    if(data.event==='button'){
-      handleButton(data.button);
-    }
+    if(data.event==='button') handleButton(data.button);
   };
   ws.onclose=()=>setTimeout(connect,1000);
 }
 
-frame.addEventListener('load',()=>{
-  setInterval(wrapUI,250);
-});
+frame.addEventListener('load',()=>setInterval(wrapUI,250));
 connect();
 </script>
 </body>
