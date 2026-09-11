@@ -5,6 +5,12 @@ APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 RUN_USER="${SUDO_USER:-$USER}"
 RUN_HOME="$(getent passwd "$RUN_USER" | cut -d: -f6)"
 
+# Explicitly identify the two Pico USB serial devices.
+# Override these when running the installer if your device paths differ:
+#   PICO_PORT=/dev/ttyACM0 BUS_PICO_PORT=/dev/ttyACM1 ./install.sh
+PICO_PORT="${PICO_PORT:-/dev/ttyACM0}"
+BUS_PICO_PORT="${BUS_PICO_PORT:-/dev/ttyACM1}"
+
 if [[ -z "$RUN_HOME" ]]; then
   echo "Could not determine home directory for $RUN_USER" >&2
   exit 1
@@ -41,6 +47,8 @@ ExecStart=$APP_DIR/.venv/bin/python $APP_DIR/kiosk/main.py
 Restart=always
 RestartSec=3
 Environment=PYTHONUNBUFFERED=1
+Environment=PICO_PORT=$PICO_PORT
+Environment=BUS_PICO_PORT=$BUS_PICO_PORT
 
 [Install]
 WantedBy=multi-user.target
@@ -69,6 +77,8 @@ fi
 echo
 echo "=================================================="
 echo "Accessibility Kiosk installation complete."
+echo "Pico 1: $PICO_PORT"
+echo "Bus Pico: $BUS_PICO_PORT"
 echo "Backend: http://127.0.0.1:8000/health"
 echo "UI:      http://127.0.0.1:8000/kiosk.html"
 echo "=================================================="
