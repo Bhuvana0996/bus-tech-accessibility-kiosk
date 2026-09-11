@@ -15,6 +15,8 @@ iframe{display:block;width:1024px;height:600px;border:0}
 const frame=document.getElementById('ui');
 let ws=null;
 let wrapped=false;
+let lastActiveScreen='';
+let busBoardingSent=false;
 
 function ui(){return frame.contentWindow}
 function activeScreen(){
@@ -28,15 +30,30 @@ function wrapUI(){
   if(!w || typeof w.chooseLang!=='function')return;
   wrapped=true;
 
-  // Language and speech are handled entirely by index.html.
-  // This wrapper only connects physical hardware events to the UI.
+  // Language, UI and passenger audio remain entirely inside index.html.
+  // This wrapper only connects physical hardware and the bus-side controller.
+  const observer=new MutationObserver(()=>watchScreen());
+  const root=frame.contentDocument?.querySelector('.kiosk');
+  if(root)observer.observe(root,{attributes:true,subtree:true,attributeFilter:['class','textContent']});
+  watchScreen();
+}
 
-  const reset=w.resetSession;
-  if(typeof reset==='function'){
-    w.resetSession=function(){
-      return reset();
-    };
+function watchScreen(){
+  const screen=activeScreen();
+  if(screen===lastActiveScreen)return;
+  lastActiveScreen=screen;
+
+  // Arrival screen means the passenger has confirmed their selected bus.
+  // Tell the Raspberry Pi backend once so it can trigger the bus-side Pico.
+  if(screen==='arrival' && !busBoardingSent){
+    const bus=Number(ui().document.getElementById('arrivalBus')?.textContent||0);
+    if(bus===191 || bus===400){
+      send({event:'bus_confirmed',bus});
+      busBoardingSent=true;
+    }
   }
+
+  if(screen==='welcome')busBoardingSent=false;
 }
 
 function handleButton(button){
@@ -57,6 +74,12 @@ function handleButton(button){
 
   if(screen==='registered' || screen==='buses'){
     w.selectBus(bus);
+  }
+}
+
+function send(payload){
+  if(ws && ws.readyState===WebSocket.OPEN){
+    ws.send(JSON.stringify(payload));
   }
 }
 
