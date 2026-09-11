@@ -11,6 +11,7 @@ from aiohttp import web
 from database import lookup_card
 from nfc import NFCReader
 from pico import PicoReader
+from bus import BusPicoController
 
 ROOT = Path(__file__).resolve().parent.parent
 PORT = 8000
@@ -25,6 +26,7 @@ class KioskServer:
         self.loop = None
         self.nfc = NFCReader(self.on_nfc)
         self.pico = PicoReader(self.on_button)
+        self.bus = BusPicoController()
 
     def emit_from_thread(self, event, **data):
         if self.loop:
@@ -71,6 +73,18 @@ class KioskServer:
             async for msg in ws:
                 if msg.type != web.WSMsgType.TEXT:
                     continue
+                try:
+                    data = msg.json()
+                except Exception:
+                    continue
+
+                # index/kiosk.html reports a confirmed bus selection.
+                # This starts the bus-side boarding sequence on the second Pico.
+                if data.get("event") == "bus_confirmed":
+                    bus = int(data.get("bus", 0))
+                    if bus in (191, 400):
+                        self.bus.send("BOARD")
+                        await ws.send_json({"event": "bus_boarding_started", "bus": bus})
         finally:
             self.clients.discard(ws)
         return ws
@@ -98,6 +112,7 @@ class KioskServer:
         finally:
             self.nfc.stop()
             self.pico.stop()
+            self.bus.stop()
             await runner.cleanup()
 
 
