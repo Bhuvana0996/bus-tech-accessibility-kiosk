@@ -11,7 +11,6 @@ from aiohttp import web
 from database import lookup_card
 from nfc import NFCReader
 from pico import PicoReader
-from bus import BusPicoController
 
 ROOT = Path(__file__).resolve().parent.parent
 PORT = 8000
@@ -26,7 +25,6 @@ class KioskServer:
         self.loop = None
         self.nfc = NFCReader(self.on_nfc)
         self.pico = PicoReader(self.on_button)
-        self.bus = BusPicoController()
 
     def emit_from_thread(self, event, **data):
         if self.loop:
@@ -49,8 +47,8 @@ class KioskServer:
     def on_nfc(self, uid):
         user = lookup_card(uid)
         if user:
-            # Accessibility needs are sent to the UI for visual display only.
-            # They are intentionally NOT spoken aloud.
+            # Additional-assistance needs are sent to the UI for visual display only.
+            # They are intentionally NOT spoken aloud or sent to the bus system.
             self.emit_from_thread(
                 "nfc_registered",
                 uid=uid,
@@ -73,18 +71,9 @@ class KioskServer:
             async for msg in ws:
                 if msg.type != web.WSMsgType.TEXT:
                     continue
-                try:
-                    data = msg.json()
-                except Exception:
-                    continue
-
-                # index/kiosk.html reports a confirmed bus selection.
-                # This starts the bus-side boarding sequence on the second Pico.
-                if data.get("event") == "bus_confirmed":
-                    bus = int(data.get("bus", 0))
-                    if bus in (191, 400):
-                        self.bus.send("BOARD")
-                        await ws.send_json({"event": "bus_boarding_started", "bus": bus})
+                # The kiosk session is intentionally self-contained after arrival information.
+                # The separate bus-side Pico is operated independently and does not receive
+                # passenger accessibility data or automatic BOARD commands from this server.
         finally:
             self.clients.discard(ws)
         return ws
@@ -103,7 +92,7 @@ class KioskServer:
         runner = web.AppRunner(app)
         await runner.setup()
         await web.TCPSite(runner, "127.0.0.1", PORT).start()
-        log.info("Kiosk UI: http://127.0.0.1:%s/kiosk.html", PORT)
+        log.info("Kiosk UI: http://127.0.0.1:%s/index.html", PORT)
 
         nfc_task = asyncio.create_task(asyncio.to_thread(self.nfc.run_forever))
         pico_task = asyncio.create_task(asyncio.to_thread(self.pico.run_forever))
@@ -112,7 +101,6 @@ class KioskServer:
         finally:
             self.nfc.stop()
             self.pico.stop()
-            self.bus.stop()
             await runner.cleanup()
 
 
