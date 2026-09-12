@@ -33,7 +33,7 @@ fi
 "$APP_DIR/.venv/bin/python" -m pip install --upgrade pip
 "$APP_DIR/.venv/bin/pip" install -r "$APP_DIR/requirements.txt"
 
-# Run the hardware bridge as a system service so NFC + Pico are always ready.
+# Run the kiosk hardware bridge as a system service so NFC + Pico are always ready.
 sudo tee /etc/systemd/system/accessibility-kiosk.service >/dev/null <<EOF
 [Unit]
 Description=Accessibility Kiosk Hardware Bridge
@@ -57,7 +57,7 @@ EOF
 sudo systemctl daemon-reload
 sudo systemctl enable --now accessibility-kiosk.service
 
-# Launch the local hardware-connected kiosk in Chromium on Raspberry Pi OS.
+# Launch the local kiosk UI directly in Chromium kiosk mode.
 mkdir -p "$RUN_HOME/.config/labwc"
 AUTOSTART="$RUN_HOME/.config/labwc/autostart"
 touch "$AUTOSTART"
@@ -65,7 +65,7 @@ if ! grep -Fq "accessibility-kiosk" "$AUTOSTART"; then
   cat >> "$AUTOSTART" <<EOF
 
 # Accessibility Kiosk
-chromium --kiosk http://127.0.0.1:8000/kiosk.html --noerrdialogs --disable-infobars --no-first-run --disable-translate --password-store=basic --touch-events=enabled --start-maximized &
+chromium --kiosk http://127.0.0.1:8000/index.html --noerrdialogs --disable-infobars --no-first-run --disable-translate --password-store=basic --touch-events=enabled --start-maximized &
 EOF
 fi
 chown "$RUN_USER:$RUN_USER" "$AUTOSTART"
@@ -80,5 +80,5 @@ echo "Accessibility Kiosk installation complete."
 echo "Pico 1: $PICO_PORT"
 echo "Bus Pico: $BUS_PICO_PORT"
 echo "Backend: http://127.0.0.1:8000/health"
-echo "UI:      http://127.0.0.1:8000/kiosk.html"
+echo "UI:      http://127.0.0.1:8000/index.html"
 echo "=================================================="
