@@ -1,6 +1,6 @@
 # Accessibility Kiosk — Raspberry Pi 5 Hardware Setup
 
-This repository uses a Raspberry Pi 5 as the main computer. The prototype has two separate Raspberry Pi Picos: one for the kiosk-side physical bus buttons and one for the bus-side ramp/audio controller.
+This repository uses a Raspberry Pi 5 as the main kiosk computer. The prototype has two separate Raspberry Pi Picos: one for the kiosk-side physical bus buttons and one for the independent bus-side ramp/audio controller.
 
 ## Architecture
 
@@ -13,18 +13,23 @@ Pico #1 buttons ──USB────────┤
                              ↓
                         Raspberry Pi 5
                              │
-                             ├── WebSocket → kiosk.html → index.html
+                             ├── WebSocket → index.html
                              │                       │
                              │                       ├── 7-inch LCD
                              │                       └── Kiosk speaker
                              │
-                             └── USB serial → Pico #2
-                                               │
-                         BUS SIDE              ├── Servo → ramp
-                                               └── DFPlayer → speaker
+                             └── kiosk session ends after arrival information
+
+                         BUS SIDE — SEPARATE
+
+                  Pico #2
+                    │
+              ┌─────┴─────┐
+              ↓           ↓
+          Servo/ramp   DFPlayer → bus speaker
 ```
 
-The browser owns the user-facing flow. Python bridges the physical hardware to the browser and sends bus-side commands to Pico #2.
+The browser owns the user-facing flow. Python bridges the PN532 and kiosk Pico to the browser. The bus-side Pico is independent and does not receive passenger names or specific assistance needs from the kiosk.
 
 ## PN532 V4 → Raspberry Pi 5
 
@@ -60,9 +65,9 @@ Flash `pico/main.py` to Pico #1 as `main.py`.
 
 The kiosk uses the same button again to confirm the selected bus. Pressing the other button changes the selection.
 
-## Pico #2 — bus-side ramp and audio controller
+## Pico #2 — separate bus-side ramp and audio controller
 
-Pico #2 is the separate Pico mounted on/with the model bus.
+Pico #2 is the separate Pico mounted on/with the model bus. It is independent of the kiosk session.
 
 | Pico GPIO | Device | Function |
 |---|---|---|
@@ -73,6 +78,21 @@ Pico #2 is the separate Pico mounted on/with the model bus.
 | GP15 | ALIGHT button → GND | Demo alighting sequence |
 
 Flash `bus/pico/main.py` to Pico #2 as `main.py`.
+
+### When is the ramp used?
+
+The ramp is **not** automatically deployed for every assistance profile.
+
+Examples:
+
+- Wheelchair user → ramp may be required
+- Parent with stroller → ramp may be required
+- Mobility aid / crutches → ramp may be required depending on the situation
+- Pregnant passenger → assistance may be needed without a ramp
+- Blind / low-vision passenger → assistance may be needed without a ramp
+- Deaf / hard-of-hearing passenger → visual communication may be needed without a ramp
+
+For the prototype, the bus-side BOARD control is used separately when ramp assistance is actually required.
 
 ### Servo power
 
@@ -102,41 +122,23 @@ Use four short recordings:
 4. **Track 4 — retracting**
    "The ramp is retracting. Please keep clear."
 
-Do not record or announce the passenger's specific accessibility needs. The public announcement intentionally uses general wording.
+Do not record or announce the passenger's specific assistance needs. The public announcement intentionally uses general wording.
 
 The current firmware uses short fixed delays between audio and ramp actions, so the MP3 recordings should be kept consistent with the expected demo timing. For a production system, use a proper playback-status/interlock mechanism rather than relying only on fixed delays.
-
-## Raspberry Pi USB serial ports
-
-The Raspberry Pi communicates with both Picos over USB serial. The default installation uses:
-
-```bash
-PICO_PORT=/dev/ttyACM0
-BUS_PICO_PORT=/dev/ttyACM1
-```
-
-The installer writes these values into the systemd service. If your Raspberry Pi assigns different device paths, override them during installation:
-
-```bash
-PICO_PORT=/dev/ttyACM0 BUS_PICO_PORT=/dev/ttyACM1 ./install.sh
-```
-
-Check the actual device paths with the Picos connected before testing. For a production deployment, stable udev device names are preferable to relying on `ttyACM0` / `ttyACM1` numbering.
 
 ## Kiosk speaker
 
 The kiosk uses the browser's Web Speech API for spoken guidance. Chromium sends the speech output through the Raspberry Pi's default audio device/speaker.
 
-Audio follows the same user flow as the UI:
+Audio follows the kiosk flow:
 
 - language selected → language instruction
 - NFC recognised → general greeting/instruction
 - bus selected → selection instruction
-- bus confirmed → arrival announcement
+- bus confirmed → arrival information
+- after arrival information → kiosk session ends automatically
 
-The user's accessibility needs are **displayed visually only** and are never spoken aloud.
-
-The browser must have the required TTS voices available for the selected language. Verify English, Chinese, Malay and Tamil on the actual Raspberry Pi because available voices depend on the Chromium/OS environment.
+The user's specific assistance needs are **displayed visually only** and are never spoken aloud.
 
 ## Install
 
@@ -153,9 +155,9 @@ The installer:
 3. adds the runtime user to `dialout`;
 4. creates the Python virtual environment;
 5. installs the PN532 and serial libraries;
-6. configures the hardware bridge as a system service;
-7. explicitly assigns the kiosk Pico and bus Pico serial ports;
-8. launches `kiosk.html` in Chromium kiosk mode.
+6. configures the kiosk hardware bridge as a system service;
+7. assigns the kiosk Pico serial port;
+8. launches `index.html` directly in Chromium kiosk mode.
 
 ## Register an NFC card
 
@@ -165,7 +167,7 @@ Run:
 ./.venv/bin/python kiosk/register_card.py
 ```
 
-Enter the NFC UID, user's name and accessibility profile. The information is stored locally in SQLite.
+Enter the NFC UID, user's name and additional-assistance profile. Profiles include wheelchair users, parents with strollers, pregnant passengers, mobility-aid users, sensory-access needs and multiple/other needs.
 
 ## Runtime flow
 
@@ -178,7 +180,7 @@ Enter the NFC UID, user's name and accessibility profile. The information is sto
        ↓
 4. Python looks up UID in SQLite
        ↓
-5. Registered → browser shows profile visually
+5. Registered → browser shows assistance profile visually
        ↓
 6. Browser speaks a general instruction to choose a bus
        ↓
@@ -190,13 +192,17 @@ Enter the NFC UID, user's name and accessibility profile. The information is sto
        ↓
 9. Browser displays arrival information + speaks announcement
        ↓
-10. Python sends BOARD to Pico #2
+10. Kiosk session ends automatically
+
+Separately:
+
+Bus arrives → bus-side Pico is operated independently
        ↓
-11. Pico #2 plays boarding announcement and deploys ramp
+If ramp assistance is required → BOARD sequence
        ↓
-12. Bus-side ALIGHT button can demonstrate alighting
+DFPlayer plays general announcement + servo deploys ramp
        ↓
-13. RETRACT can return the ramp to its upper/home position
+ALIGHT / RETRACT can be operated separately
 ```
 
 ## Bus-side serial commands
@@ -222,16 +228,15 @@ The physical BOARD and ALIGHT buttons also trigger their respective demo sequenc
 Before the complete physical demonstration, verify:
 
 - PN532 detects the intended NFC card reliably;
-- Pico #1 and Pico #2 appear on the expected USB serial ports;
-- the systemd service has the correct `PICO_PORT` and `BUS_PICO_PORT` values;
+- Pico #1 appears on the expected USB serial port;
 - Chromium speech works after a cold boot;
 - required TTS voices are available;
 - both physical kiosk buttons select/confirm the correct bus;
+- the kiosk ends the passenger session after arrival information;
 - DFPlayer tracks play correctly and at the expected timing;
 - servo endpoints do not mechanically overtravel the ramp;
 - servo has appropriate external power and common ground;
-- BOARD reaches Pico #2 and triggers the intended ramp/audio sequence;
-- ALIGHT and RETRACT work correctly;
+- bus-side BOARD / ALIGHT / RETRACT work independently;
 - pressing Home during the kiosk flow leaves the kiosk at a clean new session.
 
 This is a prototype. The ramp/servo mechanism is for tabletop demonstration and should not be treated as a production passenger-safety system.
