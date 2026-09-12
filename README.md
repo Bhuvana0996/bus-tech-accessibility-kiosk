@@ -23,7 +23,7 @@ Welcome
   ↓
 Select language
   ↓
-🔊 Language selected + instruction to tap NFC card
+🔊 Kiosk TTS: language selected + instruction to tap NFC card
   ↓
 Tap registered NFC card
   ↓
@@ -31,28 +31,54 @@ Card recognised
   ↓
 Registered additional-assistance needs shown ON SCREEN
   ↓
-🔊 General greeting + instruction to choose a bus
+🔊 Kiosk TTS: general greeting + instruction to choose a bus
   ↓
 Choose Bus 191 or Bus 400 using physical buttons
   ↓
-🔊 Bus selection instruction
+🔊 Kiosk TTS: bus selection instruction
   ↓
 Press the same button again to confirm
   ↓
-Arrival information shown + spoken
+Arrival information shown + spoken by kiosk TTS
   ↓
 Kiosk session ends automatically
 ```
 
 **Privacy rule:** the passenger's specific assistance needs are displayed visually but are **never spoken aloud**. Kiosk audio is used for navigation and general instructions only.
 
+## Two separate audio systems
+
+The prototype has two physically separate speakers/audio systems:
+
+```text
+KIOSK SIDE
+Raspberry Pi 5
+   ↓
+External kiosk speaker
+   ↓
+Browser Web Speech API / TTS
+
+BUS SIDE
+Pico #2
+   ↓
+DFPlayer Mini
+   ↓
+External bus-side speaker
+```
+
+The Raspberry Pi 5 does not have a built-in speaker or 3.5 mm analog audio jack, so the kiosk uses an external speaker connected through a supported Pi audio output/interface.
+
+The bus uses its own independent speaker. Pico #2 drives a DFPlayer Mini, which plays TTS-generated MP3 announcement files from the DFPlayer microSD card.
+
 ## Important separation: kiosk vs bus system
 
-The kiosk session and bus-side assistance system are separate.
+The kiosk and bus-side assistance system are separate physical subsystems.
 
-The kiosk's job ends after it shows the selected bus and arrival information. It does **not** automatically open the bus ramp, play the bus announcement or send passenger information to the bus.
+The kiosk handles passenger identification, visual assistance information, bus selection and arrival information. It does not publicly announce the passenger's specific assistance needs.
 
-The separate bus-side Pico handles the physical ramp and public announcements. A ramp should only be deployed when ramp assistance is actually required. For example, a wheelchair user or parent with a stroller may require the ramp, while a pregnant passenger may require priority assistance without needing the ramp.
+The separate bus-side Pico controls the physical ramp and public bus announcements. A ramp should only be deployed when ramp assistance is actually required. For example, a wheelchair user or parent with a stroller may require the ramp, while a pregnant passenger may require priority assistance without needing the ramp.
+
+There are **no physical BOARD / ALIGHT buttons** on Bus Pico #2. The bus controller receives its `BOARD`, `ALIGHT` or `RETRACT` control signal through its serial/control interface for the prototype.
 
 ## Hardware architecture
 
@@ -62,19 +88,18 @@ The separate bus-side Pico handles the physical ramp and public announcements. A
 - **7-inch 1024×600 LCD** — visual interface
 - **PN532 V4** — NFC reader over SPI
 - **Pico #1** — reads the physical Bus 191 / Bus 400 selection buttons over USB serial
-- **Kiosk speaker** — Chromium Web Speech API through the Pi's default audio output
+- **External kiosk speaker** — for browser TTS/navigation audio
 
 ### Bus side — separate system
 
-- **Pico #2** — standalone bus-side controller
+- **Pico #2** — ramp/audio controller
 - **Servo motor** — deploys/retracts the model-bus ramp when assistance requires it
-- **DFPlayer Mini + microSD** — plays prerecorded public announcements
-- **Bus-side speaker** — connected to the bus audio system
-- **BOARD / ALIGHT buttons** — physical demo controls on the bus-side Pico
+- **DFPlayer Mini** — plays TTS-generated MP3 announcements
+- **DFPlayer microSD** — stores four announcement recordings
+- **External bus-side speaker** — connected to DFPlayer
+- **Optional DFPlayer BUSY signal** — lets Pico detect when an announcement has finished
 
-The bus-side controller is not part of the kiosk session and does not receive the passenger's name or specific assistance profile.
-
-## Physical controls
+## Physical controls and connections
 
 ### Kiosk Pico (#1)
 
@@ -91,9 +116,11 @@ The same button is pressed again to confirm the selected bus. The other button c
 |---|---|---|
 | GP16 | Servo signal | Ramp movement |
 | GP4 / UART1 TX | DFPlayer RX | Audio commands |
-| GP5 / UART1 RX | DFPlayer TX | DFPlayer response |
-| GP14 | BOARD button → GND | Demo boarding sequence |
-| GP15 | ALIGHT button → GND | Demo alighting sequence |
+| GP5 / UART1 RX | DFPlayer TX | DFPlayer communication |
+| GP15 | DFPlayer BUSY | Detect when audio has finished |
+| GND | Common GND | Common reference |
+
+There are no BOARD / ALIGHT buttons on Pico #2.
 
 ## Project structure
 
@@ -120,32 +147,93 @@ bus-tech-accessibility-kiosk/
 
 ## Software responsibilities
 
-- **Browser (`index.html`)**: screen flow, language switching, visual assistance profile, bus selection UI and kiosk speech.
-- **Hardware bridge (`kiosk/main.py`)**: receives PN532 and kiosk-Pico events and forwards them to the browser. It does not send passenger data or automatic BOARD commands to the bus.
+- **Browser (`index.html`)**: screen flow, language switching, visual assistance profile, bus selection UI and kiosk TTS.
+- **Hardware bridge (`kiosk/main.py`)**: receives PN532 and kiosk-Pico events and forwards them to the browser.
 - **NFC (`kiosk/nfc.py`)**: reads PN532 cards over SPI.
 - **Kiosk Pico (`kiosk/pico.py`)**: reads `BUTTON1` / `BUTTON2` from Pico #1.
 - **Database (`kiosk/database.py`)**: maps NFC UID → user name + additional-assistance profile.
 - **Registration (`kiosk/register_card.py`)**: adds cards to the SQLite database.
 - **Kiosk Pico firmware (`pico/main.py`)**: GP14 → Bus 191 and GP15 → Bus 400.
-- **Bus Pico firmware (`bus/pico/main.py`)**: independently controls the ramp servo and DFPlayer Mini.
+- **Bus Pico firmware (`bus/pico/main.py`)**: controls the ramp servo and DFPlayer audio sequence independently.
 
 ## Audio
 
-There are two separate audio systems:
+### Kiosk audio
 
-1. **Kiosk audio:** browser Web Speech API → Chromium → Raspberry Pi audio output.
-2. **Bus audio:** prerecorded MP3 → DFPlayer Mini → bus-side speaker.
+Kiosk audio is generated by the browser's Web Speech API/TTS and sent to the external kiosk speaker through the Raspberry Pi's configured audio output.
 
-Kiosk speech is provided in English, Chinese, Malay and Tamil where the corresponding browser TTS voice is available. The UI remains visual even if a TTS voice is unavailable.
+Kiosk speech supports English, Chinese, Malay and Tamil where the corresponding browser TTS voice is available.
 
-Bus-side MP3 tracks are documented in `bus/README.md`:
+### Bus audio
+
+The bus Pico uses a DFPlayer Mini and a separate bus-side speaker. The public announcements are **generated in advance using TTS**, exported as MP3 files and stored on the DFPlayer microSD card.
+
+The bus announcements are:
 
 - Track 1 — general boarding announcement
 - Track 2 — ramp ready
 - Track 3 — general alighting announcement
 - Track 4 — ramp retracting
 
-The bus announcements use general wording and do not identify the passenger or their specific assistance need.
+The announcements use general wording and do not identify the passenger or their specific assistance need.
+
+## Bus sequence timing
+
+### Boarding
+
+```text
+BOARD signal received
+        ↓
+WAIT 30 seconds
+        ↓
+TTS Track 1 — boarding announcement
+        ↓
+Announcement finishes
+        ↓
+Ramp deploys
+        ↓
+TTS Track 2 — ramp ready
+        ↓
+Passenger boards
+```
+
+### Alighting
+
+```text
+ALIGHT signal received
+        ↓
+WAIT 30 seconds
+        ↓
+TTS Track 3 — alighting announcement
+        ↓
+Announcement finishes
+        ↓
+Ramp deploys
+        ↓
+TTS Track 2 — ramp ready
+        ↓
+Passenger alights
+```
+
+### Retracting
+
+```text
+RETRACT signal received
+        ↓
+TTS Track 4 — retracting announcement
+        ↓
+Announcement finishes
+        ↓
+Ramp retracts
+```
+
+The **30-second delay is before the boarding/alighting announcement**, not after it.
+
+## Raspberry Pi audio
+
+The Raspberry Pi 5 uses an external speaker for kiosk TTS. Select a supported audio output such as USB, HDMI, Bluetooth or another suitable audio interface/amplifier depending on the speaker used.
+
+The bus speaker is completely separate and is connected to the DFPlayer on Pico #2.
 
 ## Raspberry Pi serial port
 
@@ -161,7 +249,7 @@ If the kiosk Pico receives a different path, override it when running the instal
 PICO_PORT=/dev/ttyACM0 ./install.sh
 ```
 
-The separate bus Pico is not required to be connected to the kiosk Raspberry Pi.
+Pico #2 is a separate bus-side subsystem and does not need to share the kiosk's USB connection.
 
 ## Install on Raspberry Pi 5
 
@@ -189,12 +277,13 @@ See `bus/README.md` for:
 
 - Pico #2 wiring
 - servo power requirements
-- DFPlayer Mini wiring
-- microSD audio files
+- DFPlayer + separate speaker wiring
+- TTS MP3 file preparation
+- optional DFPlayer BUSY wiring
 - serial commands
 - bus-side demo testing
 
-The bus-side Pico accepts commands including:
+The bus-side Pico accepts:
 
 ```text
 BOARD
@@ -208,21 +297,22 @@ TEST_AUDIO_3
 TEST_AUDIO_4
 ```
 
-The `BOARD` sequence is a bus-side action. It is not automatically triggered by the kiosk session.
-
 ## Prototype limitations / final testing
 
 Before demonstrating the complete physical prototype, test the following on the actual hardware:
 
 - PN532 NFC detection and registered-card lookup
 - kiosk Pico USB serial connection
-- Chromium Web Speech voices for all required languages
-- Raspberry Pi speaker output after cold boot
+- external kiosk speaker output after cold boot
+- Chromium TTS voices for all required languages
 - kiosk physical-button selection and confirmation
 - kiosk session ending after arrival information
-- bus-side DFPlayer playback and MP3 track timing
+- DFPlayer TTS recordings and bus speaker volume
+- DFPlayer BUSY playback-finished detection if wired
+- 30-second bus-side delay
+- correct announcement → ramp deployment order
 - servo ramp angle calibration (`RAMP_UP` / `RAMP_DOWN`)
 - safe external power and common ground for the bus-side servo
-- separate bus-side BOARD / ALIGHT operation
+- separate BOARD / ALIGHT / RETRACT control
 
 This is a prototype. The servo/ramp mechanism should be treated as a tabletop demonstration rather than a production passenger-safety system.
