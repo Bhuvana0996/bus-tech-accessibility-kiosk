@@ -1,15 +1,17 @@
 # Bus-side ramp and announcement controller
 
-This is the separate second Pico used on the model bus. It controls the ramp servo and a DFPlayer Mini audio module independently of the Accessibility Kiosk.
+This is the separate second Pico used on the model bus. It controls the ramp servo and the bus-side audio system independently of the Accessibility Kiosk.
 
 ## Hardware
 
 - Raspberry Pi Pico (#2)
 - Servo motor for the ramp
 - DFPlayer Mini
-- Bus-side speaker connected to the audio system
-- microSD card for the announcement recordings
-- Two physical demo pushbuttons
+- microSD card in the DFPlayer containing TTS-generated MP3 announcements
+- Bus-side speaker connected to the DFPlayer Mini
+- Optional DFPlayer BUSY connection for accurate playback-finished detection
+
+There are **no physical BOARD / ALIGHT buttons** on the bus Pico.
 
 ## Assistance logic
 
@@ -24,7 +26,31 @@ Examples:
 - Blind / low-vision passenger → assistance may be needed, but a ramp is not automatically required
 - Deaf / hard-of-hearing passenger → visual communication may be required, but a ramp is not automatically required
 
-For this prototype, the bus-side BOARD control is operated separately when ramp assistance is actually required. The bus controller does not receive the passenger's NFC profile or specific needs from the kiosk.
+The bus controller does not receive the passenger's name or specific assistance profile through the public audio system.
+
+## Audio approach
+
+The bus Pico does not perform live cloud TTS itself. Instead, the four public announcements are created using TTS in advance and saved as MP3 files on the DFPlayer microSD card.
+
+This gives the prototype:
+
+- natural speech without requiring an internet connection on the bus;
+- a separate physical bus speaker;
+- consistent announcement wording;
+- no passenger-specific information in the public announcement.
+
+The four recordings are:
+
+1. **Track 1 — boarding**
+   "Attention passengers. A passenger requiring additional assistance will be boarding. Please give up the priority seat and allow sufficient space for the passenger to board safely. Thank you."
+2. **Track 2 — ramp ready**
+   "The ramp is ready. Please proceed when safe."
+3. **Track 3 — alighting**
+   "Attention passengers. A passenger requiring additional assistance will be alighting. Please keep the priority area clear and allow the passenger to alight safely. Thank you."
+4. **Track 4 — retracting**
+   "The ramp is retracting. Please keep clear."
+
+Do not record or announce the passenger's specific accessibility needs.
 
 ## Wiring
 
@@ -32,55 +58,146 @@ For this prototype, the bus-side BOARD control is operated separately when ramp 
 |---|---|---|
 | GP16 | Servo signal | Ramp movement |
 | GP4 / UART1 TX | DFPlayer RX | Audio commands |
-| GP5 / UART1 RX | DFPlayer TX | DFPlayer response |
-| GP14 | Board button to GND | Demo boarding sequence |
-| GP15 | Alight button to GND | Demo alighting sequence |
+| GP5 / UART1 RX | DFPlayer TX | DFPlayer communication |
+| GP15 | DFPlayer BUSY | Detect when TTS audio has finished |
 | GND | Common GND | Common reference |
 
-Power the servo from a suitable external 5 V supply if the servo draws more current than the Pico can safely provide. Keep the Pico, DFPlayer and servo grounds common.
+The DFPlayer speaker output connects to the separate bus-side speaker. If the speaker requires more power than the DFPlayer can provide, use a suitable amplifier between the DFPlayer audio output and the speaker.
 
-The DFPlayer Mini handles prerecorded audio playback. A passive speaker can be connected to the DFPlayer speaker output when the speaker is within the module's output capability; larger bus-style speakers may require an appropriate external amplifier.
+### Servo power
 
-## SD card audio files
+Power the servo from a suitable external 5 V supply if required by its current rating. Do not draw high servo current directly through the Pico. Keep the servo supply ground and Pico ground common.
 
-Use four short MP3 recordings. The playback number is based on the track numbering recognised by the DFPlayer:
+### DFPlayer BUSY pin
 
-1. Boarding announcement:
-   "Attention passengers. A passenger requiring additional assistance will be boarding. Please give up the priority seat and allow sufficient space for the passenger to board safely. Thank you."
-2. Ramp ready:
-   "The ramp is ready. Please proceed when safe."
-3. Alighting announcement:
-   "Attention passengers. A passenger requiring additional assistance will be alighting. Please keep the priority area clear and allow the passenger to alight safely. Thank you."
-4. Retracting:
-   "The ramp is retracting. Please keep clear."
+The recommended wiring is:
 
-Do not record or announce the passenger's specific accessibility needs. The public announcement intentionally uses general wording.
+```text
+DFPlayer BUSY → Pico GP15
+```
+
+The firmware uses BUSY to detect when an announcement has finished. If GP15 is not wired, the firmware falls back to the durations in `TRACK_FALLBACK_MS` in `bus/pico/main.py`.
+
+## Ramp and announcement sequence
+
+### Boarding
+
+```text
+BOARD command received
+        ↓
+WAIT 30 seconds
+        ↓
+Play TTS Track 1 — boarding announcement
+        ↓
+Wait until announcement finishes
+        ↓
+Deploy ramp
+        ↓
+Play TTS Track 2 — ramp ready
+        ↓
+Passenger boards
+```
+
+### Alighting
+
+```text
+ALIGHT command received
+        ↓
+WAIT 30 seconds
+        ↓
+Play TTS Track 3 — alighting announcement
+        ↓
+Wait until announcement finishes
+        ↓
+Deploy ramp
+        ↓
+Play TTS Track 2 — ramp ready
+        ↓
+Passenger alights
+```
+
+### Retracting
+
+```text
+RETRACT command received
+        ↓
+Play TTS Track 4 — ramp retracting
+        ↓
+Wait until announcement finishes
+        ↓
+Retract ramp
+```
+
+The important timing rule is that the **30-second delay happens first**, before the boarding/alighting announcement. The ramp only deploys after that announcement has completely finished.
 
 ## Pico firmware
 
 Copy `bus/pico/main.py` to the bus-side Pico as `main.py` and reset it.
 
-The Pico accepts these USB serial commands:
+The Pico accepts these serial commands:
 
-- `BOARD` — announcement + deploy ramp + ready announcement
-- `ALIGHT` — alighting announcement + deploy ramp + ready announcement
-- `RETRACT` — retract announcement + retract ramp
+- `BOARD` — wait 30 s → boarding announcement → deploy ramp → ramp-ready announcement
+- `ALIGHT` — wait 30 s → alighting announcement → deploy ramp → ramp-ready announcement
+- `RETRACT` — retract sequence with retracting announcement
 - `RESET` — return ramp to the upper/home position
-- `STATUS` — report current ramp angle
-- `TEST_AUDIO_1` to `TEST_AUDIO_4` — test individual recordings
+- `STATUS` — report ramp angle and DFPlayer BUSY availability
+- `TEST_AUDIO_1` to `TEST_AUDIO_4` — test individual TTS-generated recordings
 
-The physical buttons also trigger BOARD and ALIGHT for demonstrations.
+There are no physical BOARD / ALIGHT buttons.
 
 ## Kiosk separation
 
-The Accessibility Kiosk and this bus-side controller are separate systems.
+The Accessibility Kiosk and this bus-side controller remain separate systems.
 
-The kiosk ends the passenger session after showing the selected bus and arrival information. It does not send `BOARD`, deploy the ramp or play the bus announcement.
+The kiosk uses its own Raspberry Pi 5 audio output/speaker for kiosk navigation TTS. The bus has its **own separate speaker and audio system** controlled by Pico #2 + DFPlayer.
 
-The bus-side controller is operated independently when the bus arrives and additional boarding/alighting assistance is required. This keeps the passenger's private assistance profile out of the public bus audio system.
+The kiosk's public-facing UI does not speak the passenger's specific assistance needs. The bus announcements also use only general wording.
 
-## Timing and safety notes
+## TTS file preparation
 
-The current firmware uses fixed delays between audio playback and ramp movement. Keep the demonstration MP3 recordings consistent with the expected timing. For a production system, use a proper playback-status/interlock mechanism rather than relying only on fixed delays.
+Generate the four announcement recordings with the chosen TTS voice before the demonstration. Export them as MP3 files and copy them to the DFPlayer microSD card using the track numbering expected by the firmware:
 
-The servo endpoints (`RAMP_UP` and `RAMP_DOWN`) must be calibrated for the actual model ramp. The servo should have an appropriate external power supply where required; do not draw high servo current directly through the Pico.
+```text
+/01.mp3   → boarding
+/02.mp3   → ramp ready
+/03.mp3   → alighting
+/04.mp3   → retracting
+```
+
+Keep the recordings short and clear. Test the actual speaker volume in the demonstration environment.
+
+## Testing
+
+Before connecting the ramp mechanism, test the audio commands:
+
+```text
+TEST_AUDIO_1
+TEST_AUDIO_2
+TEST_AUDIO_3
+TEST_AUDIO_4
+```
+
+Then test:
+
+```text
+RESET
+STATUS
+BOARD
+ALIGHT
+RETRACT
+```
+
+For the first physical ramp test, keep the servo disconnected or mechanically unloaded so the `RAMP_UP` and `RAMP_DOWN` values can be calibrated safely.
+
+The servo endpoints in `bus/pico/main.py` are prototype values:
+
+```python
+RAMP_UP = 10
+RAMP_DOWN = 95
+```
+
+Adjust them to the actual model ramp.
+
+## Prototype limitation
+
+This is a tabletop demonstration system, not a production passenger-safety controller. The servo mechanism must be mechanically constrained and supervised during testing.
