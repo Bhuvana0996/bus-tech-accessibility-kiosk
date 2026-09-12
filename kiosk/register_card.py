@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Register an NFC card and its accessibility profile."""
+"""Register an NFC card and its additional-assistance profile."""
 
 from database import add_card
 
@@ -9,36 +9,38 @@ name = input("User name: ").strip()
 if not uid or not name:
     raise SystemExit("UID and name are required.")
 
-print("\nAccessibility profile:")
+print("\nAdditional assistance profile:")
 print("1. Pregnant")
 print("2. Blind / low vision")
 print("3. Deaf / hard of hearing")
 print("4. Wheelchair user")
 print("5. Mobility aid / crutches")
-print("6. Other")
-print("7. Multiple needs")
+print("6. Parent with stroller")
+print("7. Other")
+print("8. Multiple needs")
 
-choice = input("Select 1-7: ").strip()
+choice = input("Select 1-8: ").strip()
 profiles = {
     "1": "Pregnant",
     "2": "Blind / low vision",
     "3": "Deaf / hard of hearing",
     "4": "Wheelchair user",
     "5": "Mobility aid / crutches",
+    "6": "Parent with stroller",
 }
 
 if choice in profiles:
     accessibility = profiles[choice]
-elif choice == "7":
+elif choice == "8":
     accessibility = input("Enter needs, separated by commas: ").strip()
-elif choice == "6":
-    accessibility = input("Enter accessibility need: ").strip()
+elif choice == "7":
+    accessibility = input("Enter additional assistance need: ").strip()
 else:
     raise SystemExit("Invalid profile selection.")
 
 if not accessibility:
-    raise SystemExit("Accessibility profile is required.")
+    raise SystemExit("Additional assistance profile is required.")
 
 add_card(uid, name, accessibility)
 print(f"\nRegistered {name} with UID {uid}.")
-print(f"Accessibility profile: {accessibility}")
+print(f"Additional assistance profile: {accessibility}")
