@@ -99,7 +99,7 @@ The same button is pressed again to confirm the selected bus. The other button c
 
 ```text
 bus-tech-accessibility-kiosk/
-├── index.html              # Main kiosk UI, flow, translations, speech and kiosk WebSocket bridge
+├── index.html              # Main kiosk UI, translations, speech and kiosk WebSocket bridge
 ├── install.sh              # Raspberry Pi setup + kiosk autostart
 ├── requirements.txt        # Python backend dependencies
 ├── README.md               # Project overview
@@ -108,7 +108,6 @@ bus-tech-accessibility-kiosk/
 │   ├── main.py             # WebSocket server + NFC/Pico event bridge
 │   ├── nfc.py              # PN532 SPI reader
 │   ├── pico.py             # Kiosk Pico USB serial reader
-│   ├── bus.py              # Legacy bus controller module; not used by the kiosk session
 │   ├── database.py         # SQLite registered-card database
 │   └── register_card.py    # NFC card registration utility
 ├── pico/
