@@ -1,15 +1,30 @@
 # Bus-side ramp and announcement controller
 
-This is the second Pico used on the model bus. It controls the ramp servo and a DFPlayer Mini audio module.
+This is the separate second Pico used on the model bus. It controls the ramp servo and a DFPlayer Mini audio module independently of the Accessibility Kiosk.
 
 ## Hardware
 
 - Raspberry Pi Pico (#2)
 - Servo motor for the ramp
 - DFPlayer Mini
-- Small speaker connected to DFPlayer Mini
+- Bus-side speaker connected to the audio system
 - microSD card for the announcement recordings
-- Two optional demo pushbuttons
+- Two physical demo pushbuttons
+
+## Assistance logic
+
+The ramp is **not** deployed for every assistance profile.
+
+Examples:
+
+- Wheelchair user → ramp may be required
+- Parent with stroller → ramp may be required
+- Mobility aid / crutches → ramp may be required depending on the situation
+- Pregnant passenger → additional assistance may be needed, but a ramp is not automatically required
+- Blind / low-vision passenger → assistance may be needed, but a ramp is not automatically required
+- Deaf / hard-of-hearing passenger → visual communication may be required, but a ramp is not automatically required
+
+For this prototype, the bus-side BOARD control is operated separately when ramp assistance is actually required. The bus controller does not receive the passenger's NFC profile or specific needs from the kiosk.
 
 ## Wiring
 
@@ -24,7 +39,7 @@ This is the second Pico used on the model bus. It controls the ramp servo and a 
 
 Power the servo from a suitable external 5 V supply if the servo draws more current than the Pico can safely provide. Keep the Pico, DFPlayer and servo grounds common.
 
-The DFPlayer Mini is used because a normal passive speaker cannot be driven directly by the Pico for prerecorded spoken announcements. DFPlayer provides the audio output to the speaker over its speaker output. The module requires a microSD card for playback.
+The DFPlayer Mini handles prerecorded audio playback. A passive speaker can be connected to the DFPlayer speaker output when the speaker is within the module's output capability; larger bus-style speakers may require an appropriate external amplifier.
 
 ## SD card audio files
 
@@ -56,26 +71,13 @@ The Pico accepts these USB serial commands:
 
 The physical buttons also trigger BOARD and ALIGHT for demonstrations.
 
-## Kiosk integration
+## Kiosk separation
 
-The Raspberry Pi kiosk backend sends `BOARD` to the second Pico after the passenger confirms a bus and the arrival screen opens. The second Pico can then deploy the ramp and play the bus-side boarding announcement.
+The Accessibility Kiosk and this bus-side controller are separate systems.
 
-For the Raspberry Pi to distinguish the two Picos, the installed systemd service uses:
+The kiosk ends the passenger session after showing the selected bus and arrival information. It does not send `BOARD`, deploy the ramp or play the bus announcement.
 
-```text
-PICO_PORT=/dev/ttyACM0
-BUS_PICO_PORT=/dev/ttyACM1
-```
-
-The installer allows these paths to be overridden if the Raspberry Pi assigns different device paths:
-
-```bash
-PICO_PORT=/dev/ttyACM0 BUS_PICO_PORT=/dev/ttyACM1 ./install.sh
-```
-
-Check the actual device paths with both Picos connected before testing. For a production deployment, stable udev device names are preferable to relying on `ttyACM0` / `ttyACM1` numbering.
-
-Alighting is currently triggered from the bus-side Pico's ALIGHT button so the prototype can demonstrate an alighting event independently of the kiosk. A real deployment should replace this with a stop/vehicle event from the bus system.
+The bus-side controller is operated independently when the bus arrives and additional boarding/alighting assistance is required. This keeps the passenger's private assistance profile out of the public bus audio system.
 
 ## Timing and safety notes
 
