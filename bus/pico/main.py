@@ -5,7 +5,12 @@ import time
 # BUS-SIDE PICO #2
 # The bus Pico controls the ramp servo and DFPlayer Mini audio only.
 # There are NO physical BOARD / ALIGHT buttons.
-# Public announcements are TTS-generated MP3 files stored on the DFPlayer microSD.
+#
+# IMPORTANT:
+# - The announcement text is defined below for clear documentation.
+# - The actual speech is stored as MP3 files on the DFPlayer microSD card.
+# - DFPlayer cannot convert these Python strings into speech by itself.
+# - AUDIO_FILES maps each announcement to its required MP3 filename.
 #
 # GP16 -> servo signal
 # GP4  -> DFPlayer RX (UART1 TX)
@@ -25,13 +30,46 @@ SERVO_STEP_DELAY_MS = 15
 DF_VOLUME = 22
 ASSISTANCE_DELAY_MS = 30_000
 
+# ============================================================
+# BUS ANNOUNCEMENTS
+# ============================================================
+# The text below is the exact wording used to generate the TTS MP3s.
+# Copy the matching MP3 files to the DFPlayer microSD card.
+#
+# 0001.mp3 -> boarding announcement
+# 0002.mp3 -> ramp ready
+# 0003.mp3 -> alighting announcement
+# 0004.mp3 -> ramp retracting
+
+ANNOUNCEMENTS = {
+    1: (
+        "Attention passengers. A passenger requiring additional assistance "
+        "will be boarding. Please give up the priority seat and allow "
+        "sufficient space for the passenger to board safely. Thank you."
+    ),
+    2: "The ramp is ready. Please proceed when safe.",
+    3: (
+        "Attention passengers. A passenger requiring additional assistance "
+        "will be alighting. Please keep the priority area clear and allow "
+        "the passenger to alight safely. Thank you."
+    ),
+    4: "The ramp is retracting. Please keep clear.",
+}
+
+AUDIO_FILES = {
+    1: "0001.mp3",  # ANNOUNCEMENTS[1] - boarding
+    2: "0002.mp3",  # ANNOUNCEMENTS[2] - ramp ready
+    3: "0003.mp3",  # ANNOUNCEMENTS[3] - alighting
+    4: "0004.mp3",  # ANNOUNCEMENTS[4] - ramp retracting
+}
+
 # Fallback durations are used only if the DFPlayer BUSY pin is not available.
 # Replace these with the actual TTS recording lengths if BUSY is not wired.
 TRACK_FALLBACK_MS = {
-    1: 8_000,   # boarding announcement
-    2: 3_000,   # ramp ready
-    3: 8_000,   # alighting announcement
-    4: 3_000,   # ramp retracting
+    1: 8_000,   # 0001.mp3 - boarding
+    2: 3_000,   # 0002.mp3 - ramp ready
+    3: 8_000,   # 0003.mp3 - alighting
+    4: 3_000,   # 0004.mp3 - ramp retracting
 }
 
 servo = PWM(Pin(SERVO_PIN))
@@ -82,7 +120,12 @@ def df_command(command, parameter=0):
 
 
 def play(track):
-    """Start a TTS-generated MP3 track on the DFPlayer."""
+    """Play the MP3 mapped to the announcement track number."""
+    if track not in AUDIO_FILES:
+        print("UNKNOWN_AUDIO_TRACK=" + str(track))
+        return
+
+    print("PLAY_FILE=" + AUDIO_FILES[track])
     df_command(0x03, track)
     time.sleep_ms(150)
 
@@ -91,12 +134,17 @@ def wait_for_audio(track):
     """Wait until the selected announcement has finished."""
     if HAS_DF_BUSY:
         # DFPlayer BUSY is normally LOW while audio is playing.
+        # First wait for playback to START, then wait for it to FINISH.
         start = time.ticks_ms()
-        # Give the module a moment to start playback.
-        time.sleep_ms(100)
+
+        while df_busy.value() != 0:
+            time.sleep_ms(20)
+            if time.ticks_diff(time.ticks_ms(), start) > 5_000:
+                print("AUDIO_START_TIMEOUT=" + str(track))
+                return
+
         while df_busy.value() == 0:
             time.sleep_ms(50)
-            # Safety timeout prevents the ramp sequence from hanging forever.
             if time.ticks_diff(time.ticks_ms(), start) > 60_000:
                 print("AUDIO_TIMEOUT=" + str(track))
                 return
@@ -190,7 +238,8 @@ time.sleep_ms(500)
 df_command(0x06, DF_VOLUME)
 df_command(0x16, 0)
 print("BUS_PICO_READY")
-print("AUDIO_SOURCE=TTS_GENERATED_MP3")
+print("AUDIO_SOURCE=PREGENERATED_TTS_MP3")
+print("AUDIO_FILES=0001.mp3,0002.mp3,0003.mp3,0004.mp3")
 print("DF_BUSY=" + ("AVAILABLE" if HAS_DF_BUSY else "NOT_WIRED"))
 
 try:
