@@ -16,14 +16,9 @@ Pico #1 buttons ──USB────────┤
                              ├── WebSocket → index.html
                              │                       │
                              │                       ├── 7-inch LCD
-                             │                       └── Audio output/interface
-                             │                              ↓
-                             │                     suitable amplifier/interface
-                             │                              ↓
-                             │                     66FR speaker
-                             │                     8 Ω, 0.5 W
+                             │                       └── 66FR 8 Ω 0.5 W speaker
                              │                              ↑
-                             │                         Browser TTS
+                             │                         English Browser TTS
                              │
                              └── kiosk session ends after arrival information
 
@@ -40,7 +35,7 @@ Pico #1 buttons ──USB────────┤
                     TTS-generated MP3s
 ```
 
-The browser owns the user-facing kiosk flow. Python bridges the PN532 and kiosk Pico to the browser. The bus-side Pico is a separate subsystem and does not receive passenger names or specific assistance needs through the public audio.
+The browser owns the user-facing kiosk flow. Python bridges the PN532 and kiosk Pico to the browser. The kiosk interface and kiosk speech are **English-only** for the prototype. The bus-side Pico is a separate subsystem and does not receive passenger names or specific assistance needs through the public audio.
 
 ## PN532 V4 → Raspberry Pi 5
 
@@ -76,35 +71,25 @@ Flash `pico/main.py` to Pico #1 as `main.py`.
 
 The kiosk uses the same button again to confirm the selected bus. Pressing the other button changes the selection.
 
-## Kiosk external speaker
+## Kiosk external speaker — 66FR
 
-The current kiosk speaker is a **66FR speaker rated at 8 Ω, 0.5 W**.
+The kiosk uses a **66FR speaker rated 8 Ω, 0.5 W** for English TTS/navigation audio.
 
-The Raspberry Pi 5 does not have a built-in speaker or a 3.5 mm analog audio jack. Use a supported Pi audio output/interface and a suitable amplifier/interface that can safely drive an **8 Ω, 0.5 W** speaker.
-
-Recommended signal path:
+The Raspberry Pi 5 does not have a built-in speaker or 3.5 mm analog audio jack. Use a suitable supported Pi audio output/interface and an amplifier where required by the chosen hardware arrangement.
 
 ```text
-Raspberry Pi 5 audio output
-        ↓
-Suitable audio amplifier/interface
-        ↓
-66FR speaker
-8 Ω, 0.5 W
+Raspberry Pi 5
+      ↓
+Supported audio output/interface
+      ↓
+Suitable amplifier (if required)
+      ↓
+66FR 8 Ω 0.5 W speaker
 ```
 
-Do **not** connect the speaker directly to a Raspberry Pi GPIO pin. Do not exceed the speaker's rated power during testing.
+Do **not** connect the speaker directly to a Raspberry Pi GPIO pin.
 
-Possible Pi audio output arrangements include:
-
-- powered USB speaker system;
-- HDMI audio to a display/speaker system;
-- Bluetooth speaker;
-- USB/I2S audio interface + suitable amplifier + 66FR speaker.
-
-For the current prototype, the 66FR itself is the speaker; the amplifier/interface is the part that must be selected to match the 8 Ω, 0.5 W load.
-
-The browser's Web Speech API provides the kiosk TTS. Chromium sends that audio to the configured Raspberry Pi audio output.
+The browser uses the Web Speech API with an **English (`en-SG`)** voice where available.
 
 ## Pico #2 — separate bus-side ramp and audio controller
 
@@ -167,17 +152,17 @@ Pico GND       ── DFPlayer GND
 DFPlayer speaker output → separate bus-side speaker
 ```
 
-If the bus speaker requires more power than the DFPlayer can provide, use an appropriate amplifier between the DFPlayer audio output and the speaker.
+If the speaker requires more power than the DFPlayer can provide, use an appropriate amplifier between the DFPlayer audio output and the speaker.
 
 ### TTS announcements
 
-1. **0001.mp3 — boarding**
+1. **Track 1 — boarding**
    "Attention passengers. A passenger requiring additional assistance will be boarding. Please give up the priority seat and allow sufficient space for the passenger to board safely. Thank you."
-2. **0002.mp3 — ramp ready**
+2. **Track 2 — ramp ready**
    "The ramp is ready. Please proceed when safe."
-3. **0003.mp3 — alighting**
+3. **Track 3 — alighting**
    "Attention passengers. A passenger requiring additional assistance will be alighting. Please keep the priority area clear and allow the passenger to alight safely. Thank you."
-4. **0004.mp3 — retracting**
+4. **Track 4 — retracting**
    "The ramp is retracting. Please keep clear."
 
 Do not record or announce the passenger's specific accessibility needs.
@@ -208,13 +193,13 @@ BOARD signal
      ↓
 Wait 30 seconds
      ↓
-Play 0001.mp3 — boarding announcement
+Play TTS Track 1
      ↓
 Wait for announcement to finish
      ↓
 Deploy ramp
      ↓
-Play 0002.mp3 — ramp ready
+Play TTS Track 2
      ↓
 Passenger boards
 ```
@@ -226,13 +211,13 @@ ALIGHT signal
      ↓
 Wait 30 seconds
      ↓
-Play 0003.mp3 — alighting announcement
+Play TTS Track 3
      ↓
 Wait for announcement to finish
      ↓
 Deploy ramp
      ↓
-Play 0002.mp3 — ramp ready
+Play TTS Track 2
      ↓
 Passenger alights
 ```
@@ -242,7 +227,7 @@ Passenger alights
 ```text
 RETRACT signal
      ↓
-Play 0004.mp3 — retracting announcement
+Play TTS Track 4
      ↓
 Wait for announcement to finish
      ↓
@@ -254,9 +239,9 @@ The **30-second delay is before the boarding/alighting announcement**.
 ## Kiosk speaker and bus speaker are separate
 
 ```text
-Raspberry Pi 5 → audio interface/amplifier → 66FR (8 Ω, 0.5 W)
+Raspberry Pi 5 → audio interface/amplifier → 66FR 8 Ω 0.5 W speaker
                          ↓
-                    kiosk TTS
+                    English kiosk TTS
 
 Pico #2 → DFPlayer → external bus speaker
                          ↓
@@ -268,9 +253,9 @@ These audio systems do not share a speaker.
 ## Kiosk runtime flow
 
 ```text
-1. User selects language on LCD
+1. User presses Start on LCD
        ↓
-2. Browser speaks language instruction
+2. Browser speaks instruction to tap NFC
        ↓
 3. PN532 detects NFC card
        ↓
@@ -332,8 +317,7 @@ Before the complete physical demonstration, verify:
 - PN532 detects the intended NFC card reliably;
 - Pico #1 appears on the expected USB serial port;
 - 66FR kiosk speaker works after a cold boot;
-- kiosk amplifier/interface is suitable for the 8 Ω, 0.5 W speaker;
-- required kiosk TTS voices are available;
+- English kiosk TTS voice is available;
 - both physical kiosk buttons select/confirm the correct bus;
 - the kiosk ends the passenger session after arrival information;
 - DFPlayer plays all four TTS-generated MP3s correctly;
