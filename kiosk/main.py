@@ -61,11 +61,29 @@ class KioskServer:
     def on_button(self, button):
         self.emit_from_thread("button", button=button)
 
+    async def hardware_monitor(self):
+        """Continuously report whether the kiosk NFC reader and Pico are available."""
+        last = None
+        while True:
+            status = {
+                "nfc": self.nfc.reader is not None,
+                "pico": self.pico.serial is not None,
+            }
+            if status != last:
+                await self.broadcast("hardware_status", **status)
+                last = status
+            await asyncio.sleep(2)
+
     async def ws_handler(self, request):
         ws = web.WebSocketResponse(heartbeat=20)
         await ws.prepare(request)
         self.clients.add(ws)
         await ws.send_json({"event": "backend_ready"})
+        await ws.send_json({
+            "event": "hardware_status",
+            "nfc": self.nfc.reader is not None,
+            "pico": self.pico.serial is not None,
+        })
         log.info("Kiosk UI connected")
         try:
             async for msg in ws:
@@ -79,7 +97,12 @@ class KioskServer:
         return ws
 
     async def health(self, request):
-        return web.json_response({"ok": True, "service": "accessibility-kiosk"})
+        return web.json_response({
+            "ok": True,
+            "service": "accessibility-kiosk",
+            "nfc": self.nfc.reader is not None,
+            "pico": self.pico.serial is not None,
+        })
 
     async def run(self):
         self.loop = asyncio.get_running_loop()
@@ -94,11 +117,13 @@ class KioskServer:
         await web.TCPSite(runner, "127.0.0.1", PORT).start()
         log.info("Kiosk UI: http://127.0.0.1:%s/index.html", PORT)
 
+        monitor_task = asyncio.create_task(self.hardware_monitor())
         nfc_task = asyncio.create_task(asyncio.to_thread(self.nfc.run_forever))
         pico_task = asyncio.create_task(asyncio.to_thread(self.pico.run_forever))
         try:
             await asyncio.gather(nfc_task, pico_task)
         finally:
+            monitor_task.cancel()
             self.nfc.stop()
             self.pico.stop()
             await runner.cleanup()
