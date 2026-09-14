@@ -41,13 +41,13 @@ This gives the prototype:
 
 The four recordings are:
 
-1. **Track 1 — boarding**
+1. **0001.mp3 — boarding**
    "Attention passengers. A passenger requiring additional assistance will be boarding. Please give up the priority seat and allow sufficient space for the passenger to board safely. Thank you."
-2. **Track 2 — ramp ready**
+2. **0002.mp3 — ramp ready**
    "The ramp is ready. Please proceed when safe."
-3. **Track 3 — alighting**
+3. **0003.mp3 — alighting**
    "Attention passengers. A passenger requiring additional assistance will be alighting. Please keep the priority area clear and allow the passenger to alight safely. Thank you."
-4. **Track 4 — retracting**
+4. **0004.mp3 — retracting**
    "The ramp is retracting. Please keep clear."
 
 Do not record or announce the passenger's specific accessibility needs.
@@ -87,13 +87,13 @@ BOARD command received
         ↓
 WAIT 30 seconds
         ↓
-Play TTS Track 1 — boarding announcement
+Play 0001.mp3 — boarding announcement
         ↓
 Wait until announcement finishes
         ↓
 Deploy ramp
         ↓
-Play TTS Track 2 — ramp ready
+Play 0002.mp3 — ramp ready
         ↓
 Passenger boards
 ```
@@ -105,13 +105,13 @@ ALIGHT command received
         ↓
 WAIT 30 seconds
         ↓
-Play TTS Track 3 — alighting announcement
+Play 0003.mp3 — alighting announcement
         ↓
 Wait until announcement finishes
         ↓
 Deploy ramp
         ↓
-Play TTS Track 2 — ramp ready
+Play 0002.mp3 — ramp ready
         ↓
 Passenger alights
 ```
@@ -121,7 +121,7 @@ Passenger alights
 ```text
 RETRACT command received
         ↓
-Play TTS Track 4 — ramp retracting
+Play 0004.mp3 — ramp retracting
         ↓
 Wait until announcement finishes
         ↓
@@ -158,10 +158,10 @@ The kiosk's public-facing UI does not speak the passenger's specific assistance 
 Generate the four announcement recordings with the chosen TTS voice before the demonstration. Export them as MP3 files and copy them to the DFPlayer microSD card using the track numbering expected by the firmware:
 
 ```text
-/01.mp3   → boarding
-/02.mp3   → ramp ready
-/03.mp3   → alighting
-/04.mp3   → retracting
+/0001.mp3   → boarding
+/0002.mp3   → ramp ready
+/0003.mp3   → alighting
+/0004.mp3   → retracting
 ```
 
 Keep the recordings short and clear. Test the actual speaker volume in the demonstration environment.
