@@ -9,7 +9,7 @@ This is the separate second Pico used on the model bus. It controls the ramp ser
 - DFPlayer Mini
 - microSD card in the DFPlayer containing TTS-generated MP3 announcements
 - Bus-side speaker connected to the DFPlayer Mini
-- Optional DFPlayer BUSY connection for accurate playback-finished detection
+- **DFPlayer BUSY on Pico GP15 — required for automatic fail-safe ramp movement**
 
 There are **no physical BOARD / ALIGHT buttons** on the bus Pico.
 
@@ -52,6 +52,26 @@ The four recordings are:
 
 Do not record or announce the passenger's specific accessibility needs.
 
+## Fail-safe rule
+
+Automatic ramp movement is allowed only when the DFPlayer BUSY signal confirms the required announcement started and finished successfully.
+
+```text
+BOARD / ALIGHT / RETRACT
+        ↓
+Play required announcement
+        ↓
+BUSY confirms playback started
+        ↓
+BUSY confirms playback finished
+        ↓
+Only then may the servo move
+```
+
+If GP15 / DFPlayer BUSY is not wired, the firmware enters **DISABLED_FAILSAFE** for automatic ramp sequences. It will not guess the announcement duration and will not move the ramp automatically.
+
+This is intentional: losing audio confirmation must not silently trigger ramp movement.
+
 ## Wiring
 
 | Bus-side Pico | Device | Purpose |
@@ -59,7 +79,7 @@ Do not record or announce the passenger's specific accessibility needs.
 | GP16 | Servo signal | Ramp movement |
 | GP4 / UART1 TX | DFPlayer RX | Audio commands |
 | GP5 / UART1 RX | DFPlayer TX | DFPlayer communication |
-| GP15 | DFPlayer BUSY | Detect when TTS audio has finished |
+| GP15 | DFPlayer BUSY | Confirm announcement playback before ramp movement |
 | GND | Common GND | Common reference |
 
 The DFPlayer speaker output connects to the separate bus-side speaker. If the speaker requires more power than the DFPlayer can provide, use a suitable amplifier between the DFPlayer audio output and the speaker.
@@ -70,13 +90,13 @@ Power the servo from a suitable external 5 V supply if required by its current r
 
 ### DFPlayer BUSY pin
 
-The recommended wiring is:
+Required wiring for automatic fail-safe ramp operation:
 
 ```text
 DFPlayer BUSY → Pico GP15
 ```
 
-The firmware uses BUSY to detect when an announcement has finished. If GP15 is not wired, the firmware falls back to the durations in `TRACK_FALLBACK_MS` in `bus/pico/main.py`.
+DFPlayer BUSY should be LOW while the MP3 is playing and return HIGH after playback finishes. The firmware requires both transitions before automatic ramp movement.
 
 ## Ramp and announcement sequence
 
@@ -89,13 +109,11 @@ WAIT 30 seconds
         ↓
 Play 0001.mp3 — boarding announcement
         ↓
-Wait until announcement finishes
+BUSY confirms playback finished
         ↓
 Deploy ramp
         ↓
 Play 0002.mp3 — ramp ready
-        ↓
-Passenger boards
 ```
 
 ### Alighting
@@ -107,13 +125,11 @@ WAIT 30 seconds
         ↓
 Play 0003.mp3 — alighting announcement
         ↓
-Wait until announcement finishes
+BUSY confirms playback finished
         ↓
 Deploy ramp
         ↓
 Play 0002.mp3 — ramp ready
-        ↓
-Passenger alights
 ```
 
 ### Retracting
@@ -123,12 +139,12 @@ RETRACT command received
         ↓
 Play 0004.mp3 — ramp retracting
         ↓
-Wait until announcement finishes
+BUSY confirms playback finished
         ↓
 Retract ramp
 ```
 
-The important timing rule is that the **30-second delay happens first**, before the boarding/alighting announcement. The ramp only deploys after that announcement has completely finished.
+The important timing rule is that the **30-second delay happens first**, before the boarding/alighting announcement. The ramp only deploys after the announcement has completely finished and playback has been confirmed.
 
 ## Pico firmware
 
@@ -136,14 +152,16 @@ Copy `bus/pico/main.py` to the bus-side Pico as `main.py` and reset it.
 
 The Pico accepts these serial commands:
 
-- `BOARD` — wait 30 s → boarding announcement → deploy ramp → ramp-ready announcement
-- `ALIGHT` — wait 30 s → alighting announcement → deploy ramp → ramp-ready announcement
-- `RETRACT` — retract sequence with retracting announcement
+- `BOARD` — wait 30 s → verified boarding announcement → deploy ramp → verified ramp-ready announcement
+- `ALIGHT` — wait 30 s → verified alighting announcement → deploy ramp → verified ramp-ready announcement
+- `RETRACT` — verified retracting announcement → retract ramp
 - `RESET` — return ramp to the upper/home position
-- `STATUS` — report ramp angle and DFPlayer BUSY availability
+- `STATUS` — report ramp angle, DFPlayer BUSY availability and automatic-ramp state
 - `TEST_AUDIO_1` to `TEST_AUDIO_4` — test individual TTS-generated recordings
 
 There are no physical BOARD / ALIGHT buttons.
+
+If an audio command fails, BUSY never confirms playback, the wrong command is received, or the servo reports an error, the affected automatic sequence stops without continuing to the next ramp movement.
 
 ## Kiosk separation
 
@@ -187,6 +205,15 @@ ALIGHT
 RETRACT
 ```
 
+First verify that `STATUS` reports:
+
+```text
+DF_BUSY=AVAILABLE
+AUTO_RAMP=ENABLED
+```
+
+With GP15 disconnected, `STATUS` should report `AUTO_RAMP=DISABLED_FAILSAFE`, and BOARD / ALIGHT / RETRACT must not move the ramp automatically.
+
 For the first physical ramp test, keep the servo disconnected or mechanically unloaded so the `RAMP_UP` and `RAMP_DOWN` values can be calibrated safely.
 
 The servo endpoints in `bus/pico/main.py` are prototype values:
@@ -200,4 +227,4 @@ Adjust them to the actual model ramp.
 
 ## Prototype limitation
 
-This is a tabletop demonstration system, not a production passenger-safety controller. The servo mechanism must be mechanically constrained and supervised during testing.
+This is a tabletop demonstration system, not a production passenger-safety controller. The servo mechanism must be mechanically constrained and supervised during testing. Fail-safe software does not replace physical safety hardware, limit switches, current protection or emergency-stop controls.
