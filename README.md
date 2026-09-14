@@ -21,9 +21,7 @@ The current kiosk interface and kiosk speech are **English-only** for the protot
 ## System flow
 
 ```text
-Welcome
-  ↓
-Start
+Welcome screen
   ↓
 Tap registered NFC card
   ↓
@@ -43,6 +41,8 @@ Arrival information shown + spoken by kiosk TTS
   ↓
 Kiosk session ends automatically
 ```
+
+There is **no separate Start screen or Start button**. The Welcome screen leads directly to NFC identification.
 
 **Privacy rule:** the passenger's specific assistance needs are displayed visually but are **never spoken aloud**. Kiosk audio is used for navigation and general instructions only.
 
