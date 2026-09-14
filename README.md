@@ -44,6 +44,8 @@ Kiosk session ends automatically
 
 There is **no separate Start screen or Start button**. The Welcome screen leads directly to NFC identification.
 
+If a required kiosk component is unavailable, the interface enters an explicit **System temporarily unavailable** safe state instead of continuing as though the hardware were working.
+
 **Privacy rule:** the passenger's specific assistance needs are displayed visually but are **never spoken aloud**. Kiosk audio is used for navigation and general instructions only.
 
 ## Two separate audio systems
@@ -76,6 +78,61 @@ The browser's kiosk speech is currently **English (`en-SG`) only**.
 
 The bus uses its own independent speaker. Pico #2 drives a DFPlayer Mini, which plays TTS-generated MP3 announcement files from the DFPlayer microSD card.
 
+## Fail-safe behavior
+
+### Kiosk side
+
+The Raspberry Pi backend continuously reports the health of:
+
+- **PN532 NFC reader**
+- **Pico #1 USB button controller**
+
+The browser checks that state before allowing the related step to continue.
+
+```text
+NFC reader unavailable
+        ↓
+System temporarily unavailable
+        ↓
+Card processing disabled
+        ↓
+Automatic reconnect/recovery attempt
+```
+
+```text
+Pico #1 unavailable
+        ↓
+System temporarily unavailable
+        ↓
+Bus selection/confirmation disabled
+        ↓
+Automatic reconnect/recovery attempt
+```
+
+If the Raspberry Pi WebSocket backend disconnects or fails to appear, the browser also enters the safe state and retries the connection automatically.
+
+### Bus side
+
+The bus-side ramp controller uses a stricter rule for automatic movement:
+
+```text
+BOARD / ALIGHT
+      ↓
+30-second delay
+      ↓
+Play public announcement
+      ↓
+DFPlayer BUSY confirms audio started
+      ↓
+DFPlayer BUSY confirms audio finished
+      ↓
+Only then may the ramp deploy
+```
+
+If DFPlayer BUSY is not wired, the controller **does not automatically deploy or retract the ramp** during BOARD / ALIGHT / RETRACT sequences. Invalid commands are ignored and servo errors stop the affected sequence.
+
+This is prototype-level fail-safe logic intended to prevent an unverified audio state from triggering automatic ramp movement. It is not a production passenger-safety system.
+
 ## Important separation: kiosk vs bus system
 
 The kiosk and bus-side assistance system are separate physical subsystems.
@@ -103,7 +160,7 @@ There are **no physical BOARD / ALIGHT buttons** on Bus Pico #2. The bus control
 - **DFPlayer Mini** — plays TTS-generated MP3 announcements
 - **DFPlayer microSD** — stores four announcement recordings
 - **External bus-side speaker** — connected to DFPlayer
-- **Optional DFPlayer BUSY signal** — lets Pico detect when an announcement has finished
+- **DFPlayer BUSY signal on GP15** — required for automatic fail-safe ramp movement
 
 ## Physical controls and connections
 
@@ -123,7 +180,7 @@ The same button is pressed again to confirm the selected bus. The other button c
 | GP16 | Servo signal | Ramp movement |
 | GP4 / UART1 TX | DFPlayer RX | Audio commands |
 | GP5 / UART1 RX | DFPlayer TX | DFPlayer communication |
-| GP15 | DFPlayer BUSY | Detect when audio has finished |
+| GP15 | DFPlayer BUSY | Required to confirm audio playback before automatic ramp movement |
 | GND | Common GND | Common reference |
 
 There are no BOARD / ALIGHT buttons on Pico #2.
@@ -138,7 +195,7 @@ bus-tech-accessibility-kiosk/
 ├── README.md               # Project overview
 ├── README-HARDWARE.md      # Hardware wiring and setup guide
 ├── kiosk/
-│   ├── main.py             # WebSocket server + NFC/Pico event bridge
+│   ├── main.py             # WebSocket server + NFC/Pico event bridge + health monitoring
 │   ├── nfc.py              # PN532 SPI reader
 │   ├── pico.py             # Kiosk Pico USB serial reader
 │   ├── database.py         # SQLite registered-card database
@@ -148,19 +205,19 @@ bus-tech-accessibility-kiosk/
 └── bus/
     ├── README.md            # Separate bus-side setup and audio guide
     └── pico/
-        └── main.py         # Pico #2 ramp + DFPlayer firmware
+        └── main.py         # Pico #2 ramp + DFPlayer firmware + fail-safe checks
 ```
 
 ## Software responsibilities
 
-- **Browser (`index.html`)**: screen flow, English kiosk UI, visual assistance profile, bus selection UI and English kiosk TTS.
-- **Hardware bridge (`kiosk/main.py`)**: receives PN532 and kiosk-Pico events and forwards them to the browser.
+- **Browser (`index.html`)**: screen flow, English kiosk UI, visual assistance profile, bus selection UI, English kiosk TTS and hardware fail-safe state.
+- **Hardware bridge (`kiosk/main.py`)**: receives PN532 and kiosk-Pico events, forwards them to the browser and reports hardware health.
 - **NFC (`kiosk/nfc.py`)**: reads PN532 cards over SPI.
 - **Kiosk Pico (`kiosk/pico.py`)**: reads `BUTTON1` / `BUTTON2` from Pico #1.
 - **Database (`kiosk/database.py`)**: maps NFC UID → user name + additional-assistance profile.
 - **Registration (`kiosk/register_card.py`)**: adds cards to the SQLite database.
 - **Kiosk Pico firmware (`pico/main.py`)**: GP14 → Bus 191 and GP15 → Bus 400.
-- **Bus Pico firmware (`bus/pico/main.py`)**: controls the ramp servo and DFPlayer audio sequence independently.
+- **Bus Pico firmware (`bus/pico/main.py`)**: controls the ramp servo and DFPlayer audio sequence independently and blocks automatic ramp movement when audio completion cannot be verified.
 
 ## Audio
 
@@ -181,6 +238,15 @@ The bus announcements are:
 - Track 3 — general alighting announcement
 - Track 4 — ramp retracting
 
+Files expected by the firmware:
+
+```text
+0001.mp3
+0002.mp3
+0003.mp3
+0004.mp3
+```
+
 The announcements use general wording and do not identify the passenger or their specific assistance need.
 
 ## Bus sequence timing
@@ -194,13 +260,11 @@ WAIT 30 seconds
         ↓
 TTS Track 1 — boarding announcement
         ↓
-Announcement finishes
+DFPlayer BUSY confirms finish
         ↓
 Ramp deploys
         ↓
 TTS Track 2 — ramp ready
-        ↓
-Passenger boards
 ```
 
 ### Alighting
@@ -212,13 +276,11 @@ WAIT 30 seconds
         ↓
 TTS Track 3 — alighting announcement
         ↓
-Announcement finishes
+DFPlayer BUSY confirms finish
         ↓
 Ramp deploys
         ↓
 TTS Track 2 — ramp ready
-        ↓
-Passenger alights
 ```
 
 ### Retracting
@@ -228,7 +290,7 @@ RETRACT signal received
         ↓
 TTS Track 4 — retracting announcement
         ↓
-Announcement finishes
+DFPlayer BUSY confirms finish
         ↓
 Ramp retracts
 ```
@@ -285,7 +347,7 @@ See `bus/README.md` for:
 - servo power requirements
 - DFPlayer + separate speaker wiring
 - TTS MP3 file preparation
-- optional DFPlayer BUSY wiring
+- required DFPlayer BUSY wiring for automatic ramp movement
 - serial commands
 - bus-side demo testing
 
@@ -312,11 +374,13 @@ Before demonstrating the complete physical prototype, test the following on the 
 - external 66FR kiosk speaker output after cold boot
 - English kiosk TTS output (`en-SG`)
 - kiosk physical-button selection and confirmation
+- kiosk backend health/fault state by disconnecting the NFC reader and Pico #1
 - kiosk session ending after arrival information
 - DFPlayer TTS recordings and bus speaker volume
-- DFPlayer BUSY playback-finished detection if wired
+- DFPlayer BUSY playback-finished detection
 - 30-second bus-side delay
 - correct announcement → ramp deployment order
+- automatic ramp movement remains disabled when DFPlayer BUSY is disconnected
 - servo ramp angle calibration (`RAMP_UP` / `RAMP_DOWN`)
 - safe external power and common ground for the bus-side servo
 - separate BOARD / ALIGHT / RETRACT control
