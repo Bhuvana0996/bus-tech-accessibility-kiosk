@@ -78,60 +78,68 @@ The browser's kiosk speech is currently **English (`en-SG`) only**.
 
 The bus uses its own independent speaker. Pico #2 drives a DFPlayer Mini, which plays TTS-generated MP3 announcement files from the DFPlayer microSD card.
 
-## Fail-safe behavior
+## Fail-safe methods
 
-### Kiosk side
+The prototype uses multiple fail-safe methods to stop the system from continuing when a required component or safety condition cannot be verified.
 
-The Raspberry Pi backend continuously reports the health of:
+### Kiosk side fail-safe methods
 
-- **PN532 NFC reader**
-- **Pico #1 USB button controller**
+1. **Hardware health monitoring** — the Raspberry Pi backend continuously checks the health of the PN532 NFC reader and Pico #1 USB button controller.
+2. **Safe-state lockout** — when a required component is unavailable, the browser shows **System temporarily unavailable** and disables the affected function instead of pretending the hardware is working.
+3. **NFC fail-safe** — if the PN532 is disconnected or unavailable, card processing is disabled and the kiosk attempts automatic reconnection/recovery.
+4. **Button-controller fail-safe** — if Pico #1 is disconnected or unavailable, Bus 191/400 selection and confirmation are disabled and automatic recovery is attempted.
+5. **Backend connection fail-safe** — if the Raspberry Pi WebSocket backend disconnects or fails, the browser enters the safe state and automatically retries the connection.
+6. **No false hardware input** — the kiosk does not create a fake bus selection when the physical button controller is unavailable.
+7. **Session reset** — after the arrival information is completed, the session ends automatically and the kiosk returns to the Welcome screen.
 
-The browser checks that state before allowing the related step to continue.
+### Bus-side ramp fail-safe methods
 
-```text
-NFC reader unavailable
-        ↓
-System temporarily unavailable
-        ↓
-Card processing disabled
-        ↓
-Automatic reconnect/recovery attempt
-```
+1. **DFPlayer BUSY verification** — the controller checks the DFPlayer BUSY signal to verify that the announcement actually started and finished.
+2. **Audio-before-ramp interlock** — the ramp is only allowed to move automatically after the required public announcement has finished successfully.
+3. **BUSY disconnected fail-safe** — if the DFPlayer BUSY signal is not wired or cannot be verified, automatic ramp deployment/retraction is blocked during BOARD / ALIGHT / RETRACT sequences.
+4. **Command validation** — invalid serial commands are ignored instead of triggering a ramp sequence.
+5. **Servo fault stop** — if a servo operation encounters an error, the affected sequence is stopped rather than continuing automatically.
+6. **Separate bus control** — the bus-side ramp controller is independent from the kiosk, so a kiosk fault does not directly trigger physical ramp movement.
 
-```text
-Pico #1 unavailable
-        ↓
-System temporarily unavailable
-        ↓
-Bus selection/confirmation disabled
-        ↓
-Automatic reconnect/recovery attempt
-```
-
-If the Raspberry Pi WebSocket backend disconnects or fails to appear, the browser also enters the safe state and retries the connection automatically.
-
-### Bus side
-
-The bus-side ramp controller uses a stricter rule for automatic movement:
+### Bus-side automatic movement sequence
 
 ```text
-BOARD / ALIGHT
-      ↓
+BOARD / ALIGHT command received
+        ↓
 30-second delay
-      ↓
+        ↓
 Play public announcement
-      ↓
-DFPlayer BUSY confirms audio started
-      ↓
-DFPlayer BUSY confirms audio finished
-      ↓
-Only then may the ramp deploy
+        ↓
+Check DFPlayer BUSY: audio started
+        ↓
+Wait for DFPlayer BUSY: audio finished
+        ↓
+Safety condition verified?
+     ↙             ↘
+   YES              NO
+    ↓                ↓
+Ramp may move      Ramp movement blocked
 ```
 
-If DFPlayer BUSY is not wired, the controller **does not automatically deploy or retract the ramp** during BOARD / ALIGHT / RETRACT sequences. Invalid commands are ignored and servo errors stop the affected sequence.
+For `RETRACT`:
 
-This is prototype-level fail-safe logic intended to prevent an unverified audio state from triggering automatic ramp movement. It is not a production passenger-safety system.
+```text
+RETRACT command received
+        ↓
+Play retracting announcement
+        ↓
+Check DFPlayer BUSY: audio started
+        ↓
+Wait for DFPlayer BUSY: audio finished
+        ↓
+Safety condition verified?
+     ↙             ↘
+   YES              NO
+    ↓                ↓
+Ramp retracts      Ramp movement blocked
+```
+
+These methods are intended to prevent an unverified hardware, communication or audio state from causing the system to continue automatically. They are **prototype-level fail-safe measures**, not a certified production passenger-safety system. Software cannot guarantee a safe physical position during total power loss or mechanical failure.
 
 ## Important separation: kiosk vs bus system
 
