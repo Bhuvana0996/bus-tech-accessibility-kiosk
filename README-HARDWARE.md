@@ -35,7 +35,7 @@ Pico #1 buttons ──USB────────┤
                     TTS-generated MP3s
 ```
 
-The browser owns the user-facing kiosk flow. Python bridges the PN532 and kiosk Pico to the browser. The kiosk interface and kiosk speech are **English-only** for the prototype. The bus-side Pico is a separate subsystem and does not receive passenger names or specific assistance needs through the public audio.
+The browser owns the user-facing kiosk flow. Python bridges the PN532 and kiosk Pico to the browser. The kiosk interface and kiosk speech are **English-only** for the prototype. The kiosk also monitors the NFC reader and Pico #1 health and enters a safe state if a required component is unavailable. The bus-side Pico is a separate subsystem and does not receive passenger names or specific assistance needs through the public audio.
 
 ## PN532 V4 → Raspberry Pi 5
 
@@ -56,6 +56,8 @@ Enable SPI:
 sudo raspi-config nonint do_spi 0
 ```
 
+If the PN532 disconnects or cannot initialise, the kiosk reports an **NFC reader unavailable** safe state and will retry automatically.
+
 ## Pico #1 — kiosk physical bus buttons
 
 Pico #1 connects to the Raspberry Pi over USB serial.
@@ -70,6 +72,8 @@ The Pico firmware uses internal pull-ups, so no external pull-up resistor is req
 Flash `pico/main.py` to Pico #1 as `main.py`.
 
 The kiosk uses the same button again to confirm the selected bus. Pressing the other button changes the selection.
+
+If Pico #1 disconnects, bus selection and confirmation are disabled and the kiosk enters a **physical button controller unavailable** safe state until the controller reconnects.
 
 ## Kiosk external speaker — 66FR
 
@@ -100,7 +104,7 @@ Pico #2 is mounted on/with the model bus and is independent of the kiosk session
 | GP16 | Servo signal | Ramp movement |
 | GP4 / UART1 TX | DFPlayer RX | Audio commands |
 | GP5 / UART1 RX | DFPlayer TX | DFPlayer communication |
-| GP15 | DFPlayer BUSY | Detect when announcement has finished |
+| GP15 | DFPlayer BUSY | Required to confirm announcement playback before automatic ramp movement |
 | GND | Common GND | Common reference |
 
 There are **no physical BOARD / ALIGHT buttons** on Pico #2.
@@ -178,11 +182,17 @@ Store the files on the DFPlayer microSD as:
 
 The exact TTS voice can be chosen when generating the recordings. Keep the wording consistent for the demonstration.
 
-### Playback-finished detection
+### Playback-finished detection and fail-safe rule
 
-DFPlayer BUSY is recommended because the ramp should deploy **only after the boarding/alighting announcement has finished**.
+DFPlayer BUSY is **required** for automatic ramp operation.
 
-If GP15 is not wired, the firmware uses fallback timing values. BUSY is preferred for the physical prototype because the actual TTS recording length can vary.
+```text
+DFPlayer BUSY → Pico GP15
+```
+
+The firmware requires BUSY to confirm that the announcement started and finished before automatic ramp movement is allowed. If GP15 is not wired, `STATUS` reports `AUTO_RAMP=DISABLED_FAILSAFE` and BOARD / ALIGHT / RETRACT will not move the ramp automatically.
+
+This avoids guessing MP3 duration and prevents an unverified audio state from triggering ramp movement.
 
 ## Bus-side runtime flow
 
@@ -195,13 +205,11 @@ Wait 30 seconds
      ↓
 Play TTS Track 1
      ↓
-Wait for announcement to finish
+BUSY confirms playback finished
      ↓
 Deploy ramp
      ↓
 Play TTS Track 2
-     ↓
-Passenger boards
 ```
 
 ### Alighting
@@ -213,13 +221,11 @@ Wait 30 seconds
      ↓
 Play TTS Track 3
      ↓
-Wait for announcement to finish
+BUSY confirms playback finished
      ↓
 Deploy ramp
      ↓
 Play TTS Track 2
-     ↓
-Passenger alights
 ```
 
 ### Retracting
@@ -229,7 +235,7 @@ RETRACT signal
      ↓
 Play TTS Track 4
      ↓
-Wait for announcement to finish
+BUSY confirms playback finished
      ↓
 Retract ramp
 ```
@@ -253,9 +259,9 @@ These audio systems do not share a speaker.
 ## Kiosk runtime flow
 
 ```text
-1. User presses Start on LCD
+1. Welcome screen
        ↓
-2. Browser speaks instruction to tap NFC
+2. User taps NFC card
        ↓
 3. PN532 detects NFC card
        ↓
@@ -274,9 +280,13 @@ These audio systems do not share a speaker.
 9. Browser displays arrival information + speaks it
        ↓
 10. Kiosk session ends automatically
+```
+
+If the Raspberry Pi backend, PN532 or Pico #1 becomes unavailable during the flow, the browser enters the safe state and does not continue the affected interaction.
 
 Separately:
 
+```text
 Bus-side control signal
        ↓
 Pico #2
@@ -285,11 +295,9 @@ If ramp assistance is required → BOARD / ALIGHT sequence
        ↓
 30-second delay
        ↓
-General TTS announcement
+Verified public TTS announcement
        ↓
-Announcement finishes
-       ↓
-Ramp deploys
+Ramp deploys only after BUSY confirms completion
 ```
 
 ## Bus-side serial commands
@@ -319,16 +327,20 @@ Before the complete physical demonstration, verify:
 - 66FR kiosk speaker works after a cold boot;
 - English kiosk TTS voice is available;
 - both physical kiosk buttons select/confirm the correct bus;
+- disconnecting the PN532 produces the kiosk NFC safe state;
+- disconnecting Pico #1 produces the kiosk button-controller safe state;
+- reconnecting the failed component clears the safe state automatically;
 - the kiosk ends the passenger session after arrival information;
 - DFPlayer plays all four TTS-generated MP3s correctly;
 - bus speaker volume is clear in the demonstration environment;
 - DFPlayer BUSY correctly indicates playback completion;
+- with GP15 disconnected, automatic ramp movement remains disabled;
 - 30-second bus-side delay occurs before the boarding/alighting announcement;
-- ramp deploys only after the announcement finishes;
+- ramp deploys only after BUSY confirms announcement completion;
 - ramp-ready announcement plays after deployment;
 - servo endpoints do not mechanically overtravel the ramp;
 - servo has appropriate external power and common ground;
 - BOARD / ALIGHT / RETRACT control works independently;
 - Home during the kiosk flow leaves the kiosk at a clean new session.
 
-This is a prototype. The ramp/servo mechanism is for tabletop demonstration and should not be treated as a production passenger-safety system.
+This is a prototype. The ramp/servo mechanism is for tabletop demonstration and should not be treated as a production passenger-safety system. Fail-safe software does not replace physical safety hardware, limit switches, current protection or emergency-stop controls.
