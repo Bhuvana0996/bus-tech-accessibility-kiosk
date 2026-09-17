@@ -18,32 +18,50 @@ class NFCReader:
         from digitalio import DigitalInOut
         from adafruit_pn532.spi import PN532_SPI
 
+        log.info("Starting SPI...")
         spi = busio.SPI(board.SCK, board.MOSI, board.MISO)
-        cs_pin = DigitalInOut(board.CE0)  # GPIO8 / physical pin 24
+
+        # PN532 SPI chip-select: GPIO8 / physical pin 24.
+        # D8 is the same GPIO as CE0, but using D8 makes the intended
+        # manual chip-select pin explicit for the PN532 CircuitPython driver.
+        cs_pin = DigitalInOut(board.D8)
+
+        log.info("Initializing PN532 over SPI...")
         pn532 = PN532_SPI(spi, cs_pin, debug=False)
+
+        log.info("Checking PN532 firmware...")
         ic, ver, rev, _ = pn532.firmware_version
-        log.info("PN532 detected: IC=0x%02X firmware=%d.%d", ic, ver, rev)
+        log.info("PN532 detected! IC=0x%02X firmware=%d.%d", ic, ver, rev)
+
         pn532.SAM_configuration()
         self.reader = pn532
 
     def run_forever(self):
         last_uid = None
         last_seen = 0.0
+
         while self.running:
             try:
                 self._connect()
-                log.info("NFC reader ready; waiting for card")
+                log.info("PN532 ready. Tap an NFC card now.")
+
                 while self.running:
                     uid = self.reader.read_passive_target(timeout=0.5)
+
                     if uid is None:
                         continue
-                    uid_text = ":".join(f"{b:02X}" for b in uid)
+
+                    card_id = "".join(f"{x:02X}" for x in uid)
+                    uid_text = ":".join(f"{x:02X}" for x in uid)
+
                     now = time.monotonic()
                     if uid_text == last_uid and now - last_seen < 2.0:
                         continue
+
                     last_uid, last_seen = uid_text, now
-                    log.info("NFC card UID: %s", uid_text)
+                    log.info("TAG DETECTED! ID Number: %s", card_id)
                     self.callback(uid_text)
+
             except Exception as exc:
                 log.warning("NFC unavailable: %s", exc)
                 self.reader = None
