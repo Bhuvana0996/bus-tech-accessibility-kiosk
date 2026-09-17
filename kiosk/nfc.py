@@ -21,10 +21,10 @@ class NFCReader:
         log.info("Starting SPI...")
         spi = busio.SPI(board.SCK, board.MOSI, board.MISO)
 
-        # PN532 SPI chip-select: GPIO8 / physical pin 24.
-        # D8 is the same GPIO as CE0, but using D8 makes the intended
-        # manual chip-select pin explicit for the PN532 CircuitPython driver.
-        cs_pin = DigitalInOut(board.D8)
+        # PN532 SPI chip-select: GPIO8 / physical pin 24 / SPI0 CE0.
+        # CE0 must be released from the Linux SPI chip-select consumer so
+        # Blinka can control it as a normal GPIO for the PN532 driver.
+        cs_pin = DigitalInOut(board.CE0)
 
         log.info("Initializing PN532 over SPI...")
         pn532 = PN532_SPI(spi, cs_pin, debug=False)
