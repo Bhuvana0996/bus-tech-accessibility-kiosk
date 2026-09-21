@@ -20,8 +20,6 @@ class NFCReader:
 
         log.info("Starting SPI...")
         spi = busio.SPI(board.SCK, board.MOSI, board.MISO)
-
-        # PN532 SPI chip-select: GPIO8 / physical pin 24 / SPI0 CE0.
         cs_pin = DigitalInOut(board.CE0)
 
         log.info("Initializing PN532 over SPI...")
@@ -44,25 +42,20 @@ class NFCReader:
                 log.info("PN532 ready. Tap an NFC card now.")
 
                 while self.running:
-                    # Poll for ISO14443A / NFC-A cards.  Keep the timeout
-                    # short so the kiosk remains responsive when no card is present.
-                    uid = self.reader.read_passive_target(
-                        card_baud=106,
-                        timeout=0.5,
-                    )
+                    # Use the library's default passive-target polling so
+                    # previously working registered cards behave as before.
+                    uid = self.reader.read_passive_target(timeout=0.5)
 
                     if uid is None:
                         continue
 
-                    card_id = "".join(f"{x:02X}" for x in uid)
                     uid_text = ":".join(f"{x:02X}" for x in uid)
-
                     now = time.monotonic()
                     if uid_text == last_uid and now - last_seen < 2.0:
                         continue
 
                     last_uid, last_seen = uid_text, now
-                    log.info("TAG DETECTED! ID Number: %s", card_id)
+                    log.info("TAG DETECTED! ID Number: %s", "".join(f"{x:02X}" for x in uid))
                     self.callback(uid_text)
 
             except Exception as exc:
