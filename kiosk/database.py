@@ -24,6 +24,19 @@ def _connect():
         )
         conn.commit()
 
+    # Prototype NFC card registrations.
+    # These physical UIDs map to the logical demo users used by the kiosk.
+    conn.executemany(
+        "INSERT OR IGNORE INTO users(card_uid, name, accessibility, registered) VALUES (?, ?, ?, 1)",
+        [
+            ("04:1A:8E:E2:AE:18:90", "Bhuvana", "Wheelchair user - Ramp"),
+            ("04:82:A8:E2:AE:18:91", "Sheera", "Visually Impaired"),
+            ("04:54:2C:E2:AE:18:91", "Rakshita", "Hearing Impaired"),
+            ("04:F7:42:E2:AE:18:90", "Wee Ming", "Hearing & Visually Impaired"),
+        ],
+    )
+    conn.commit()
+
     return conn
 
 
