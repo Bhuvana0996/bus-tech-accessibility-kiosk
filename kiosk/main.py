@@ -10,7 +10,7 @@ from aiohttp import web
 
 from database import lookup_card
 from nfc import NFCReader
-from pico import PicoReader
+from usb_buttons import USBButtonReader
 
 ROOT = Path(__file__).resolve().parent.parent
 PORT = 8000
@@ -24,13 +24,11 @@ class KioskServer:
         self.clients: Set[web.WebSocketResponse] = set()
         self.loop = None
         self.nfc = NFCReader(self.on_nfc)
-        self.pico = PicoReader(self.on_button)
+        self.buttons = USBButtonReader(self.on_button)
 
     def emit_from_thread(self, event, **data):
         if self.loop:
-            asyncio.run_coroutine_threadsafe(
-                self.broadcast(event, **data), self.loop
-            )
+            asyncio.run_coroutine_threadsafe(self.broadcast(event, **data), self.loop)
 
     async def broadcast(self, event, **data):
         payload = {"event": event, **data}
@@ -47,8 +45,6 @@ class KioskServer:
     def on_nfc(self, uid):
         user = lookup_card(uid)
         if user:
-            # Additional-assistance needs are sent to the UI for visual display only.
-            # They are intentionally NOT spoken aloud or sent to the bus system.
             self.emit_from_thread(
                 "nfc_registered",
                 uid=uid,
@@ -62,12 +58,11 @@ class KioskServer:
         self.emit_from_thread("button", button=button)
 
     async def hardware_monitor(self):
-        """Continuously report whether the kiosk NFC reader and Pico are available."""
         last = None
         while True:
             status = {
                 "nfc": self.nfc.reader is not None,
-                "pico": self.pico.serial is not None,
+                "buttons": self.buttons.device is not None,
             }
             if status != last:
                 await self.broadcast("hardware_status", **status)
@@ -82,16 +77,13 @@ class KioskServer:
         await ws.send_json({
             "event": "hardware_status",
             "nfc": self.nfc.reader is not None,
-            "pico": self.pico.serial is not None,
+            "buttons": self.buttons.device is not None,
         })
         log.info("Kiosk UI connected")
         try:
             async for msg in ws:
                 if msg.type != web.WSMsgType.TEXT:
                     continue
-                # The kiosk session is intentionally self-contained after arrival information.
-                # The separate bus-side Pico is operated independently and does not receive
-                # passenger accessibility data or automatic BOARD commands from this server.
         finally:
             self.clients.discard(ws)
         return ws
@@ -101,7 +93,7 @@ class KioskServer:
             "ok": True,
             "service": "accessibility-kiosk",
             "nfc": self.nfc.reader is not None,
-            "pico": self.pico.serial is not None,
+            "buttons": self.buttons.device is not None,
         })
 
     async def run(self):
@@ -119,13 +111,13 @@ class KioskServer:
 
         monitor_task = asyncio.create_task(self.hardware_monitor())
         nfc_task = asyncio.create_task(asyncio.to_thread(self.nfc.run_forever))
-        pico_task = asyncio.create_task(asyncio.to_thread(self.pico.run_forever))
+        button_task = asyncio.create_task(asyncio.to_thread(self.buttons.run_forever))
         try:
-            await asyncio.gather(nfc_task, pico_task)
+            await asyncio.gather(nfc_task, button_task)
         finally:
             monitor_task.cancel()
             self.nfc.stop()
-            self.pico.stop()
+            self.buttons.stop()
             await runner.cleanup()
 
 
