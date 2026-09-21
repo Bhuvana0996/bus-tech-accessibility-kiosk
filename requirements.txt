@@ -1,4 +1,4 @@
 aiohttp>=3.10,<4
-pyserial>=3.5
 adafruit-blinka>=8.50
 adafruit-circuitpython-pn532>=2.4
+evdev>=1.7,<2
