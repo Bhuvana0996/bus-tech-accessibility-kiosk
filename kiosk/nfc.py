@@ -22,8 +22,6 @@ class NFCReader:
         spi = busio.SPI(board.SCK, board.MOSI, board.MISO)
 
         # PN532 SPI chip-select: GPIO8 / physical pin 24 / SPI0 CE0.
-        # CE0 must be released from the Linux SPI chip-select consumer so
-        # Blinka can control it as a normal GPIO for the PN532 driver.
         cs_pin = DigitalInOut(board.CE0)
 
         log.info("Initializing PN532 over SPI...")
@@ -46,7 +44,12 @@ class NFCReader:
                 log.info("PN532 ready. Tap an NFC card now.")
 
                 while self.running:
-                    uid = self.reader.read_passive_target(timeout=0.5)
+                    # Poll for ISO14443A / NFC-A cards.  Keep the timeout
+                    # short so the kiosk remains responsive when no card is present.
+                    uid = self.reader.read_passive_target(
+                        card_baud=106,
+                        timeout=0.5,
+                    )
 
                     if uid is None:
                         continue
