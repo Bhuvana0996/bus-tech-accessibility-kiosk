@@ -313,7 +313,7 @@ The bus speaker is completely separate and is connected to the DFPlayer on Pico 
 
 ## Raspberry Pi serial port
 
-The Raspberry Pi kiosk connects to Pico #1 for the physical selection buttons. The installed systemd service uses:
+The Raspberry Pi kiosk connects directly to the custom 4-key USB keypad for physical bus selection. The installed systemd service uses:
 
 ```bash
 PICO_PORT=/dev/ttyACM0
