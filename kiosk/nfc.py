@@ -14,72 +14,65 @@ class NFCReader:
         self.spi = None
         self.cs_pin = None
 
-    def _try_pn532(self, spi, cs_pin, speed):
-        from adafruit_pn532.spi import PN532_SPI
+    def _close_connection(self):
+        self.reader = None
 
-        # PN532 V4 can be sensitive to SPI speed depending on wiring/power.
-        pn532 = PN532_SPI(spi, cs_pin, debug=False)
+        if self.cs_pin is not None:
+            try:
+                self.cs_pin.value = True
+            except Exception:
+                pass
+            try:
+                self.cs_pin.deinit()
+            except Exception:
+                pass
 
-        # PN532_SPI configures the SPI bus itself when communicating.
-        # Give the bus a conservative speed before the first command.
-        deadline = time.monotonic() + 3
-        while not spi.try_lock():
-            if time.monotonic() >= deadline:
-                raise RuntimeError("SPI bus could not be locked")
-            time.sleep(0.02)
-        try:
-            spi.configure(baudrate=speed, polarity=0, phase=0, bits=8)
-        finally:
-            spi.unlock()
-
-        ic, ver, rev, _ = pn532.firmware_version
-        log.info(
-            "PN532 detected! IC=0x%02X firmware=%d.%d at %d Hz",
-            ic, ver, rev, speed
-        )
-        pn532.SAM_configuration()
-        return pn532
+        self.cs_pin = None
+        self.spi = None
 
     def _connect(self):
         import board
         import busio
         from digitalio import DigitalInOut
+        from adafruit_pn532.spi import PN532_SPI
 
-        log.info("Starting SPI...")
-        self.spi = busio.SPI(board.SCK, board.MOSI, board.MISO)
+        self._close_connection()
 
-        # The project wiring is:
-        # MOSI=19, MISO=21, SCK=23, SS/CE0=24.
-        self.cs_pin = DigitalInOut(board.CE0)
-        self.cs_pin.switch_to_output(value=True)
+        log.info("Starting PN532 SPI on CE0...")
+        spi = busio.SPI(board.SCK, board.MOSI, board.MISO)
+        cs_pin = DigitalInOut(board.CE0)
+        cs_pin.switch_to_output(value=True)
 
-        # Try conservative SPI speeds first. This is more tolerant of
-        # breadboard/jumper-wire signal quality than a high clock rate.
-        speeds = (100_000, 250_000, 500_000, 1_000_000)
+        try:
+            # Keep the SPI setup simple and deterministic.
+            pn532 = PN532_SPI(spi, cs_pin, debug=False)
 
-        last_error = None
-        for speed in speeds:
-            for attempt in range(1, 4):
-                if not self.running:
-                    return
+            log.info("Checking PN532 firmware...")
+            ic, ver, rev, _ = pn532.firmware_version
 
-                try:
-                    log.info(
-                        "Checking PN532 over CE0 at %d Hz (attempt %d/3)...",
-                        speed, attempt
-                    )
-                    pn532 = self._try_pn532(self.spi, self.cs_pin, speed)
-                    self.reader = pn532
-                    return
-                except Exception as exc:
-                    last_error = exc
-                    log.warning(
-                        "PN532 SPI check failed at %d Hz (attempt %d/3): %s",
-                        speed, attempt, exc
-                    )
-                    time.sleep(0.5)
+            log.info(
+                "PN532 detected! IC=0x%02X firmware=%d.%d",
+                ic,
+                ver,
+                rev,
+            )
 
-        raise RuntimeError(f"PN532 did not respond over SPI/CE0: {last_error}")
+            pn532.SAM_configuration()
+
+            self.spi = spi
+            self.cs_pin = cs_pin
+            self.reader = pn532
+
+        except Exception:
+            try:
+                cs_pin.value = True
+            except Exception:
+                pass
+            try:
+                cs_pin.deinit()
+            except Exception:
+                pass
+            raise
 
     def run_forever(self):
         last_uid = None
@@ -98,31 +91,26 @@ class NFCReader:
 
                     uid_text = ":".join(f"{x:02X}" for x in uid)
                     now = time.monotonic()
+
                     if uid_text == last_uid and now - last_seen < 2.0:
                         continue
 
-                    last_uid, last_seen = uid_text, now
+                    last_uid = uid_text
+                    last_seen = now
+
                     log.info(
                         "TAG DETECTED! ID Number: %s",
-                        "".join(f"{x:02X}" for x in uid)
+                        "".join(f"{x:02X}" for x in uid),
                     )
                     self.callback(uid_text)
 
             except Exception as exc:
                 log.warning("NFC unavailable: %s", exc)
-                self.reader = None
-                time.sleep(3)
+                self._close_connection()
+
+                if self.running:
+                    time.sleep(2)
 
     def stop(self):
         self.running = False
-        self.reader = None
-
-        if self.cs_pin:
-            try:
-                self.cs_pin.value = True
-                self.cs_pin.deinit()
-            except Exception:
-                pass
-
-        self.cs_pin = None
-        self.spi = None
+        self._close_connection()
