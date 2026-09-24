@@ -5,7 +5,7 @@ log = logging.getLogger("kiosk.nfc")
 
 
 class NFCReader:
-    """PN532 V4 over SPI using CE0."""
+    """PN532 V4 over SPI using Raspberry Pi CE0."""
 
     def __init__(self, callback):
         self.callback = callback
@@ -25,6 +25,11 @@ class NFCReader:
                 self.cs_pin.deinit()
             except Exception:
                 pass
+        if self.spi is not None:
+            try:
+                self.spi.unlock()
+            except Exception:
+                pass
         self.cs_pin = None
         self.spi = None
 
@@ -42,13 +47,18 @@ class NFCReader:
         cs_pin.switch_to_output(value=True)
 
         try:
-            # Explicitly configure the Pi SPI bus before giving it to PN532.
+            # Let the PN532 library own the SPI transaction settings.
+            # 500 kHz is deliberately conservative for PN532 V4 boards.
             while not spi.try_lock():
                 time.sleep(0.01)
-            spi.configure(baudrate=1000000, polarity=0, phase=0)
+            spi.configure(baudrate=500000, polarity=0, phase=0)
             spi.unlock()
 
             pn532 = PN532_SPI(spi, cs_pin, debug=False)
+
+            # Some PN532 boards need a short settling time after CS is
+            # initialised before the first command.
+            time.sleep(0.15)
 
             log.info("Checking PN532 firmware...")
             ic, ver, rev, _ = pn532.firmware_version
@@ -72,6 +82,10 @@ class NFCReader:
                 cs_pin.deinit()
             except Exception:
                 pass
+            try:
+                spi.unlock()
+            except Exception:
+                pass
             self.spi = None
             self.cs_pin = None
             self.reader = None
@@ -88,6 +102,7 @@ class NFCReader:
 
                 while self.running:
                     uid = self.reader.read_passive_target(timeout=0.5)
+
                     if uid is None:
                         continue
 
@@ -100,8 +115,10 @@ class NFCReader:
                     last_uid = uid_text
                     last_seen = now
 
-                    log.info("TAG DETECTED! ID Number: %s",
-                             "".join(f"{x:02X}" for x in uid))
+                    log.info(
+                        "TAG DETECTED! ID Number: %s",
+                        "".join(f"{x:02X}" for x in uid)
+                    )
                     self.callback(uid_text)
 
             except Exception as exc:
