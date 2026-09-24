@@ -96,8 +96,23 @@ class NFCReader:
                 self._connect()
                 log.info("PN532 ready. Tap an NFC card now.")
 
+                read_errors = 0
+
                 while self.running:
-                    uid = self.reader.read_passive_target(timeout=0.5)
+                    try:
+                        uid = self.reader.read_passive_target(timeout=0.5)
+                        read_errors = 0
+                    except Exception as exc:
+                        read_errors += 1
+                        if read_errors <= 3:
+                            log.warning(
+                                "PN532 read hiccup (%d/3): %s",
+                                read_errors, exc
+                            )
+                        if read_errors < 3:
+                            time.sleep(0.2)
+                            continue
+                        raise
 
                     if uid is None:
                         continue
