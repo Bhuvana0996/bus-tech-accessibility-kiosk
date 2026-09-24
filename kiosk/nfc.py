@@ -56,16 +56,12 @@ class NFCReader:
 
             pn532 = PN532_SPI(spi, cs_pin, debug=False)
 
-            # Some PN532 boards need a short settling time after CS is
-            # initialised before the first command.
+            # PN532_SPI() already performs the firmware detection internally.
+            # Do not query firmware a second time: some PN532 V4 boards can
+            # answer the first SPI transaction but miss the immediate second
+            # one, which incorrectly caused the reader to be discarded.
             time.sleep(0.15)
-
-            log.info("Checking PN532 firmware...")
-            ic, ver, rev, _ = pn532.firmware_version
-            log.info(
-                "PN532 detected! IC=0x%02X firmware=%d.%d",
-                ic, ver, rev
-            )
+            log.info("PN532 detected and SPI connection established.")
 
             pn532.SAM_configuration()
 
