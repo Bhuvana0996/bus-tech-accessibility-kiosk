@@ -34,6 +34,7 @@ After=network.target
 [Service]
 Type=simple
 User=$RUN_USER
+SupplementaryGroups=input
 WorkingDirectory=$APP_DIR
 ExecStart=$APP_DIR/.venv/bin/python $APP_DIR/kiosk/main.py
 Restart=always
@@ -66,8 +67,9 @@ fi
 echo
 echo "=================================================="
 echo "Accessibility Kiosk installation complete."
-echo "USB buttons: Keyboard 1 (HID 1189:8890)"
+echo "USB keypad: custom 4-key HID keypad"
+echo "KEY1 = 0 = Bus 191"
+echo "KEY4 = 1 = Bus 400"
 echo "Backend:     http://127.0.0.1:8000/health"
 echo "UI:          http://127.0.0.1:8000/index.html"
-echo "Bus system:  separate Raspberry Pi 5"
 echo "=================================================="
