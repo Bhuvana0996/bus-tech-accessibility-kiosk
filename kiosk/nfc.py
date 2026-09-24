@@ -14,56 +14,72 @@ class NFCReader:
         self.spi = None
         self.cs_pin = None
 
+    def _try_pn532(self, spi, cs_pin, speed):
+        from adafruit_pn532.spi import PN532_SPI
+
+        # PN532 V4 can be sensitive to SPI speed depending on wiring/power.
+        pn532 = PN532_SPI(spi, cs_pin, debug=False)
+
+        # PN532_SPI configures the SPI bus itself when communicating.
+        # Give the bus a conservative speed before the first command.
+        deadline = time.monotonic() + 3
+        while not spi.try_lock():
+            if time.monotonic() >= deadline:
+                raise RuntimeError("SPI bus could not be locked")
+            time.sleep(0.02)
+        try:
+            spi.configure(baudrate=speed, polarity=0, phase=0, bits=8)
+        finally:
+            spi.unlock()
+
+        ic, ver, rev, _ = pn532.firmware_version
+        log.info(
+            "PN532 detected! IC=0x%02X firmware=%d.%d at %d Hz",
+            ic, ver, rev, speed
+        )
+        pn532.SAM_configuration()
+        return pn532
+
     def _connect(self):
         import board
         import busio
         from digitalio import DigitalInOut
-        from adafruit_pn532.spi import PN532_SPI
 
-        # Make sure SPI is actually enabled before trying the PN532.
         log.info("Starting SPI...")
         self.spi = busio.SPI(board.SCK, board.MOSI, board.MISO)
 
-        # Wait for the Linux SPI bus to become available.
-        deadline = time.monotonic() + 5
-        while not self.spi.try_lock():
-            if time.monotonic() >= deadline:
-                raise RuntimeError("SPI bus could not be locked")
-            time.sleep(0.05)
-
-        try:
-            self.spi.configure(baudrate=1_000_000, polarity=0, phase=0, bits=8)
-        finally:
-            self.spi.unlock()
-
+        # The project wiring is:
+        # MOSI=19, MISO=21, SCK=23, SS/CE0=24.
         self.cs_pin = DigitalInOut(board.CE0)
         self.cs_pin.switch_to_output(value=True)
 
-        log.info("Initializing PN532 over SPI (CE0, 1 MHz)...")
-        pn532 = PN532_SPI(self.spi, self.cs_pin, debug=False)
+        # Try conservative SPI speeds first. This is more tolerant of
+        # breadboard/jumper-wire signal quality than a high clock rate.
+        speeds = (100_000, 250_000, 500_000, 1_000_000)
 
-        # The PN532 can take a moment after power-up/reset before its
-        # firmware command responds. Try several times instead of failing
-        # the NFC reader permanently.
         last_error = None
-        for attempt in range(1, 6):
-            try:
-                log.info("Checking PN532 firmware (attempt %d/5)...", attempt)
-                ic, ver, rev, _ = pn532.firmware_version
-                log.info(
-                    "PN532 detected! IC=0x%02X firmware=%d.%d",
-                    ic, ver, rev
-                )
+        for speed in speeds:
+            for attempt in range(1, 4):
+                if not self.running:
+                    return
 
-                pn532.SAM_configuration()
-                self.reader = pn532
-                return
-            except Exception as exc:
-                last_error = exc
-                log.warning("PN532 check failed (attempt %d/5): %s", attempt, exc)
-                time.sleep(0.8)
+                try:
+                    log.info(
+                        "Checking PN532 over CE0 at %d Hz (attempt %d/3)...",
+                        speed, attempt
+                    )
+                    pn532 = self._try_pn532(self.spi, self.cs_pin, speed)
+                    self.reader = pn532
+                    return
+                except Exception as exc:
+                    last_error = exc
+                    log.warning(
+                        "PN532 SPI check failed at %d Hz (attempt %d/3): %s",
+                        speed, attempt, exc
+                    )
+                    time.sleep(0.5)
 
-        raise RuntimeError(f"PN532 did not respond over SPI: {last_error}")
+        raise RuntimeError(f"PN532 did not respond over SPI/CE0: {last_error}")
 
     def run_forever(self):
         last_uid = None
