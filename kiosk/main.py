@@ -9,7 +9,17 @@ from typing import Set
 from aiohttp import web
 
 from database import lookup_card
-from nfc_reader import NFCReader
+# Load the project-local NFC reader by file path so it cannot collide
+# with any installed Python package named "nfc".
+import importlib.util
+
+_NFC_PATH = Path(__file__).resolve().parent / "nfc.py"
+_NFC_SPEC = importlib.util.spec_from_file_location("kiosk_nfc_reader", _NFC_PATH)
+if _NFC_SPEC is None or _NFC_SPEC.loader is None:
+    raise ImportError(f"Cannot load NFC reader: {_NFC_PATH}")
+_NFC_MODULE = importlib.util.module_from_spec(_NFC_SPEC)
+_NFC_SPEC.loader.exec_module(_NFC_MODULE)
+NFCReader = _NFC_MODULE.NFCReader
 from usb_buttons import USBButtonReader
 
 ROOT = Path(__file__).resolve().parent.parent
