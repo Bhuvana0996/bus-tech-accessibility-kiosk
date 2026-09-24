@@ -5,7 +5,7 @@ log = logging.getLogger("kiosk.nfc")
 
 
 class NFCReader:
-    """ELECHOUSE PN532 V4 over SPI on Raspberry Pi 5."""
+    """PN532 V4 over SPI using CE0."""
 
     def __init__(self, callback):
         self.callback = callback
@@ -16,7 +16,6 @@ class NFCReader:
 
     def _close_connection(self):
         self.reader = None
-
         if self.cs_pin is not None:
             try:
                 self.cs_pin.value = True
@@ -26,7 +25,6 @@ class NFCReader:
                 self.cs_pin.deinit()
             except Exception:
                 pass
-
         self.cs_pin = None
         self.spi = None
 
@@ -37,24 +35,26 @@ class NFCReader:
         from adafruit_pn532.spi import PN532_SPI
 
         self._close_connection()
-
         log.info("Starting PN532 SPI on CE0...")
+
         spi = busio.SPI(board.SCK, board.MOSI, board.MISO)
         cs_pin = DigitalInOut(board.CE0)
         cs_pin.switch_to_output(value=True)
 
         try:
-            # Keep the SPI setup simple and deterministic.
+            # Explicitly configure the Pi SPI bus before giving it to PN532.
+            while not spi.try_lock():
+                time.sleep(0.01)
+            spi.configure(baudrate=1000000, polarity=0, phase=0)
+            spi.unlock()
+
             pn532 = PN532_SPI(spi, cs_pin, debug=False)
 
             log.info("Checking PN532 firmware...")
             ic, ver, rev, _ = pn532.firmware_version
-
             log.info(
                 "PN532 detected! IC=0x%02X firmware=%d.%d",
-                ic,
-                ver,
-                rev,
+                ic, ver, rev
             )
 
             pn532.SAM_configuration()
@@ -72,6 +72,9 @@ class NFCReader:
                 cs_pin.deinit()
             except Exception:
                 pass
+            self.spi = None
+            self.cs_pin = None
+            self.reader = None
             raise
 
     def run_forever(self):
@@ -85,7 +88,6 @@ class NFCReader:
 
                 while self.running:
                     uid = self.reader.read_passive_target(timeout=0.5)
-
                     if uid is None:
                         continue
 
@@ -98,16 +100,13 @@ class NFCReader:
                     last_uid = uid_text
                     last_seen = now
 
-                    log.info(
-                        "TAG DETECTED! ID Number: %s",
-                        "".join(f"{x:02X}" for x in uid),
-                    )
+                    log.info("TAG DETECTED! ID Number: %s",
+                             "".join(f"{x:02X}" for x in uid))
                     self.callback(uid_text)
 
             except Exception as exc:
                 log.warning("NFC unavailable: %s", exc)
                 self._close_connection()
-
                 if self.running:
                     time.sleep(2)
 
