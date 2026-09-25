@@ -47,21 +47,19 @@ class NFCReader:
         cs_pin.switch_to_output(value=True)
 
         try:
-            # Let the PN532 library own the SPI transaction settings.
-            # 500 kHz is deliberately conservative for PN532 V4 boards.
-            while not spi.try_lock():
-                time.sleep(0.01)
-            spi.configure(baudrate=500000, polarity=0, phase=0)
-            spi.unlock()
-
+            # Let the Adafruit PN532 driver manage SPI transactions.
             pn532 = PN532_SPI(spi, cs_pin, debug=False)
 
-            # PN532_SPI() already performs the firmware detection internally.
-            # Do not query firmware a second time: some PN532 V4 boards can
-            # answer the first SPI transaction but miss the immediate second
-            # one, which incorrectly caused the reader to be discarded.
             time.sleep(0.15)
-            log.info("PN532 detected and SPI connection established.")
+
+            # Follow the documented PN532 startup sequence:
+            # firmware check -> SAM configuration -> card polling.
+            log.info("Checking PN532 firmware...")
+            ic, ver, rev, _ = pn532.firmware_version
+            log.info(
+                "PN532 detected! IC=0x%02X firmware=%d.%d",
+                ic, ver, rev
+            )
 
             pn532.SAM_configuration()
 
