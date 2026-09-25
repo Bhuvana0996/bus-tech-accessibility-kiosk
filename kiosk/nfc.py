@@ -1,6 +1,8 @@
 import logging
 import time
 
+__all__ = ["NFCReader"]
+
 log = logging.getLogger("kiosk.nfc")
 
 
@@ -61,11 +63,10 @@ class NFCReader:
                 ic, ver, rev
             )
 
-            # No PN532 IRQ wire is connected in this build. The library's
-            # default SAM configuration enables the PN532 IRQ output, so use
-            # IRQ=0x00 and rely on SPI status polling instead.
-            pn532.call_function(0x14, params=[0x01, 0x14, 0x00])
-            log.info("PN532 SAM configured for SPI polling (IRQ disabled).")
+            # The kiosk does not use the PN532 IRQ pin, so use the driver's
+            # normal SAM configuration and poll for cards over SPI.
+            pn532.SAM_configuration()
+            log.info("PN532 SAM configured for SPI polling.")
 
             self.spi = spi
             self.cs_pin = cs_pin
