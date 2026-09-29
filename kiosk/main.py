@@ -9,7 +9,7 @@ from typing import Set
 from aiohttp import web
 
 from database import lookup_card
-from nfc import NFCReader
+from kiosk_nfc import NFCReader
 from usb_buttons import USBButtonReader
 
 ROOT = Path(__file__).resolve().parent.parent
