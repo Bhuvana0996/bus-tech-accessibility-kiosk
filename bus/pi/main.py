@@ -134,6 +134,16 @@ def handle(command):
         reset()
     elif command == "STATUS":
         status()
+    elif command == "TEST_RAMP_DOWN":
+        if move_ramp(RAMP_DOWN):
+            print("TEST_RAMP_DOWN_OK", flush=True)
+        else:
+            print("TEST_RAMP_DOWN_FAILED", flush=True)
+    elif command == "TEST_RAMP_UP":
+        if move_ramp(RAMP_UP):
+            print("TEST_RAMP_UP_OK", flush=True)
+        else:
+            print("TEST_RAMP_UP_FAILED", flush=True)
     elif command.startswith("TEST_AUDIO_"):
         try:
             number = int(command.rsplit("_", 1)[1])
