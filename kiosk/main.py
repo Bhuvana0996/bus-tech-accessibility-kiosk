@@ -104,6 +104,44 @@ class KioskServer:
             self.clients.discard(ws)
         return ws
 
+    async def tts(self, request):
+        """Generate quiet local TTS and play it through MAX98357A card 2."""
+        try:
+            data = await request.json()
+            text = str(data.get("text", "")).strip()
+            if not text:
+                return web.json_response({"ok": False, "error": "Missing text"}, status=400)
+            wav = Path("/tmp/kiosk_tts.wav")
+            quiet = Path("/tmp/kiosk_tts_quiet.wav")
+            proc = await asyncio.create_subprocess_exec(
+                "espeak-ng", "-w", str(wav), "-s", "145", "-p", "50", text,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            _, err = await proc.communicate()
+            if proc.returncode != 0:
+                return web.json_response({"ok": False, "error": err.decode(errors="replace")}, status=500)
+            proc = await asyncio.create_subprocess_exec(
+                "sox", str(wav), str(quiet), "vol", "0.03",
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            _, err = await proc.communicate()
+            if proc.returncode != 0:
+                return web.json_response({"ok": False, "error": err.decode(errors="replace")}, status=500)
+            proc = await asyncio.create_subprocess_exec(
+                "aplay", "-D", "plughw:2,0", str(quiet),
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            _, err = await proc.communicate()
+            if proc.returncode != 0:
+                return web.json_response({"ok": False, "error": err.decode(errors="replace")}, status=500)
+            return web.json_response({"ok": True})
+        except Exception as exc:
+            log.exception("TTS playback failed")
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
     async def health(self, request):
         return web.json_response({
             "ok": True,
@@ -118,6 +156,7 @@ class KioskServer:
         app.add_routes([
             web.get("/ws", self.ws_handler),
             web.get("/health", self.health),
+            web.post("/tts", self.tts),
             web.static("/", str(ROOT), show_index=False),
         ])
         runner = web.AppRunner(app)
