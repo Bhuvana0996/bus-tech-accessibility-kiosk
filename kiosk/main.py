@@ -9,6 +9,10 @@ from typing import Set
 from aiohttp import web
 
 from database import lookup_card
+
+PENDING_CARD_UIDS = {
+    "04:87:28:E2:AE:18:90": {"card_id": "CARD005", "user_id": "U005", "name": "Randy", "status": "registration_in_progress"}
+}
 from kiosk_nfc import NFCReader
 from usb_buttons import USBButtonReader
 
@@ -43,6 +47,18 @@ class KioskServer:
         log.info("EVENT %s", payload)
 
     def on_nfc(self, uid):
+        uid = uid.upper()
+        pending = PENDING_CARD_UIDS.get(uid)
+        if pending:
+            self.emit_from_thread(
+                "nfc_pending",
+                uid=uid,
+                card_id=pending["card_id"],
+                user_id=pending["user_id"],
+                name=pending["name"],
+                status=pending["status"],
+            )
+            return
         user = lookup_card(uid)
         if user:
             self.emit_from_thread(
