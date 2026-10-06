@@ -122,7 +122,7 @@ class KioskServer:
             if proc.returncode != 0:
                 return web.json_response({"ok": False, "error": err.decode(errors="replace")}, status=500)
             proc = await asyncio.create_subprocess_exec(
-                "sox", str(wav), str(quiet), "vol", "0.03",
+                "sox", str(wav), str(quiet), "vol", "0.005",
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.PIPE,
             )
